@@ -1,0 +1,65 @@
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smoothweb-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      - SERVER_PORT=8080
+      - GIN_MODE=${GIN_MODE:-release}
+      - DB_PATH=/app/data/smoothweb.db
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-24h}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      # Database volume - persists data across container restarts
+      - backend_data:/app/data
+      # Log volume - for persistent logging
+      - backend_logs:/app/logs
+    networks:
+      - smoothweb-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Development Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: smoothweb-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8080/api/v1}
+    volumes:
+      # Mount source code for hot reload in development
+      - ./frontend:/app
+      # Keep node_modules outside to avoid conflicts between host and container
+      - /app/node_modules
+    networks:
+      - smoothweb-network
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# Named volumes for persistence
+volumes:
+  backend_data:
+    driver: local
+  backend_logs:
+    driver: local
+
+# Network for service communication
+networks:
+  smoothweb-network:
+    driver: bridge

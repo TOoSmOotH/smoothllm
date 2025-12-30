@@ -1,0 +1,47 @@
+{
+  "name": "smoothweb-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@vee-validate/yup": "^4.12.5",
+    "axios": "^1.6.2",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "lucide-vue-next": "^0.303.0",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.2.1",
+    "radix-vue": "^1.9.6",
+    "tailwind-merge": "^2.2.0",
+    "vee-validate": "^4.12.5",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5",
+    "vue-sonner": "^2.0.9",
+    "yup": "^1.4.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.1",
+    "@types/node": "^20.10.5",
+    "@vitejs/plugin-vue": "^4.5.2",
+    "@vitest/coverage-v8": "^1.1.0",
+    "@vitest/ui": "^1.1.0",
+    "@vue/test-utils": "^2.4.3",
+    "autoprefixer": "^10.4.16",
+    "jsdom": "^23.0.1",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10",
+    "vitest": "^1.1.0",
+    "vue-tsc": "^1.8.25"
+  }
+}
