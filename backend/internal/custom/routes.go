@@ -59,3 +59,27 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 		keys.POST("/:id/revoke", keyHandler.RevokeKey)
 	}
 }
+
+// RegisterProxyRoutes registers the LLM proxy routes at /v1 (outside /api/v1 group)
+// This is necessary for OpenAI API compatibility - clients expect /v1/chat/completions
+// These routes use proxy API key authentication, not JWT
+func RegisterProxyRoutes(router *gin.Engine, deps Dependencies) {
+	// Initialize services
+	providerService := services.NewProviderService(deps.DB)
+	keyService := services.NewKeyService(deps.DB)
+	proxyService := services.NewProxyService(keyService, providerService)
+
+	// Initialize proxy handler
+	proxyHandler := handlers.NewProxyHandler(proxyService)
+
+	// Proxy routes at /v1 (OpenAI-compatible endpoints)
+	// These use proxy API key authentication (Bearer sk-smoothllm-xxx), not JWT
+	v1Proxy := router.Group("/v1")
+	{
+		// OpenAI-compatible chat completions endpoint
+		v1Proxy.POST("/chat/completions", proxyHandler.ChatCompletions)
+
+		// OpenAI-compatible models list endpoint
+		v1Proxy.GET("/models", proxyHandler.ListModels)
+	}
+}

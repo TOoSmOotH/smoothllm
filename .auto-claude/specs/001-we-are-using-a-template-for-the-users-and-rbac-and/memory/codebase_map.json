@@ -29,7 +29,17 @@
       "description": "KeyHandler for proxy API key management endpoints. Uses NewKeyHandler(keyService) constructor. Implements ListKeys, GetKey, CreateKey, UpdateKey, DeleteKey, RevokeKey. Uses auth.GetUserID(c) for user authentication and strconv.ParseUint for ID parsing from URL params. CreateKey returns full key once in response (KeyCreateResponse), subsequent GetKey calls only return key prefix for security.",
       "category": "handler",
       "discovered_at": "2026-01-03T02:43:42.947893+00:00"
+    },
+    "backend/internal/custom/services/proxy.go": {
+      "description": "ProxyService for LLM request proxying. Key methods: NewProxyService(keyService, providerService), ValidateAndGetProvider(apiKey), ParseModelName(model, defaultProviderType), ProxyRequest(c, proxyKey, provider), ProxyWithReverseProxy(c, provider, modelInfo), ListModels(provider), GetProxyKeyFromRequest(c). Handles OpenAI\u2192Anthropic request transformation, preserves User-Agent, injects max_tokens for Anthropic. ProxyResult struct captures usage stats for tracking.",
+      "category": "services",
+      "discovered_at": "2026-01-03T02:48:40.520545+00:00"
+    },
+    "backend/internal/custom/handlers/proxy.go": {
+      "description": "ProxyHandler for LLM proxy endpoints. Uses NewProxyHandler(proxyService) constructor. Implements ChatCompletions (POST /v1/chat/completions) and ListModels (GET /v1/models). Unlike other handlers that use JWT auth, proxy handlers authenticate via proxy API key in Authorization header using proxyService.GetProxyKeyFromRequest(c) and ValidateAndGetProvider(). Returns OpenAI-compatible error responses with error.message, error.type, and error.code fields.",
+      "category": "handler",
+      "discovered_at": "2026-01-03T02:50:30.850630+00:00"
     }
   },
-  "last_updated": "2026-01-03T02:43:42.947898+00:00"
+  "last_updated": "2026-01-03T02:50:30.850637+00:00"
 }
