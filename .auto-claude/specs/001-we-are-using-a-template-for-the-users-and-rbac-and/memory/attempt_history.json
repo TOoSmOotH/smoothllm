@@ -143,11 +143,35 @@
         }
       ],
       "status": "completed"
+    },
+    "subtask-4-3": {
+      "attempts": [
+        {
+          "session": 13,
+          "timestamp": "2026-01-02T21:53:27.369599",
+          "approach": "Implemented: Register proxy routes (outside /api/v1 group for OpenAI compatibility)",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-5-1": {
+      "attempts": [
+        {
+          "session": 14,
+          "timestamp": "2026-01-02T21:56:16.915210",
+          "approach": "Implemented: Create usage service for recording and querying usage data",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
     }
   },
   "stuck_subtasks": [],
   "metadata": {
     "created_at": "2026-01-02T21:25:19.854870",
-    "last_updated": "2026-01-02T21:50:42.626674"
+    "last_updated": "2026-01-02T21:56:16.915216"
   }
 }
