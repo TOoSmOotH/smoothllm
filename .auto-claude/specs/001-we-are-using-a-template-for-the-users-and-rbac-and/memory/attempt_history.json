@@ -167,11 +167,35 @@
         }
       ],
       "status": "completed"
+    },
+    "subtask-5-2": {
+      "attempts": [
+        {
+          "session": 15,
+          "timestamp": "2026-01-02T21:58:07.658872",
+          "approach": "Implemented: Create usage handlers for statistics endpoints",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    },
+    "subtask-5-3": {
+      "attempts": [
+        {
+          "session": 16,
+          "timestamp": "2026-01-02T22:00:45.455615",
+          "approach": "Implemented: Register usage routes and integrate usage recording into proxy",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
     }
   },
   "stuck_subtasks": [],
   "metadata": {
     "created_at": "2026-01-02T21:25:19.854870",
-    "last_updated": "2026-01-02T21:56:16.915216"
+    "last_updated": "2026-01-02T22:00:45.455621"
   }
 }

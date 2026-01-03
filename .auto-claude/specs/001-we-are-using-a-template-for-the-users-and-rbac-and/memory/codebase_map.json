@@ -39,7 +39,12 @@
       "description": "ProxyHandler for LLM proxy endpoints. Uses NewProxyHandler(proxyService) constructor. Implements ChatCompletions (POST /v1/chat/completions) and ListModels (GET /v1/models). Unlike other handlers that use JWT auth, proxy handlers authenticate via proxy API key in Authorization header using proxyService.GetProxyKeyFromRequest(c) and ValidateAndGetProvider(). Returns OpenAI-compatible error responses with error.message, error.type, and error.code fields.",
       "category": "handler",
       "discovered_at": "2026-01-03T02:50:30.850630+00:00"
+    },
+    "backend/internal/custom/handlers/usage.go": {
+      "description": "UsageHandler for usage statistics endpoints. Uses NewUsageHandler(usageService) constructor. Implements GetUsageSummary, GetDailyUsage, GetUsageByKey, GetUsageByProvider, GetUsageByModel, GetRecentUsage. Uses auth.GetUserID(c) for user authentication. Includes parseQueryParams helper method that extracts common query parameters (start_date, end_date, provider_id, key_id, model, limit, offset) supporting both RFC3339 and YYYY-MM-DD date formats.",
+      "category": "handlers",
+      "discovered_at": "2026-01-03T02:57:58.920469+00:00"
     }
   },
-  "last_updated": "2026-01-03T02:50:30.850637+00:00"
+  "last_updated": "2026-01-03T02:57:58.920475+00:00"
 }
