@@ -28,9 +28,11 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 
 	// Initialize services
 	providerService := services.NewProviderService(deps.DB)
+	keyService := services.NewKeyService(deps.DB)
 
 	// Initialize handlers
 	providerHandler := handlers.NewProviderHandler(providerService)
+	keyHandler := handlers.NewKeyHandler(keyService)
 
 	// Provider routes (protected with JWT)
 	providers := v1.Group("/providers")
@@ -43,5 +45,17 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 		providers.PUT("/:id", providerHandler.UpdateProvider)
 		providers.DELETE("/:id", providerHandler.DeleteProvider)
 		providers.POST("/:id/test", providerHandler.TestConnection)
+	}
+
+	// API Key routes (protected with JWT)
+	keys := v1.Group("/keys")
+	keys.Use(auth.AuthMiddleware(deps.JWT))
+	{
+		keys.GET("", keyHandler.ListKeys)
+		keys.POST("", keyHandler.CreateKey)
+		keys.GET("/:id", keyHandler.GetKey)
+		keys.PUT("/:id", keyHandler.UpdateKey)
+		keys.DELETE("/:id", keyHandler.DeleteKey)
+		keys.POST("/:id/revoke", keyHandler.RevokeKey)
 	}
 }
