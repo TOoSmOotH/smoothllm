@@ -1,0 +1,34 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Write(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Edit(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Glob(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Grep(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Read(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/.auto-claude/specs/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Write(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/.auto-claude/specs/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Edit(/home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and/.auto-claude/specs/001-we-are-using-a-template-for-the-users-and-rbac-and/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}

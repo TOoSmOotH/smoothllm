@@ -187,6 +187,14 @@ func main() {
 		})
 	}
 
+	// Register LLM proxy routes at /v1 (outside /api/v1 for OpenAI compatibility)
+	custom.RegisterProxyRoutes(router, custom.Dependencies{
+		DB:     db.GetDB(),
+		Config: cfg,
+		JWT:    jwtService,
+		RBAC:   rbacMiddleware,
+	})
+
 	// Static file serving for uploaded media (public, no auth required)
 	router.Static("/uploads", "./uploads")
 

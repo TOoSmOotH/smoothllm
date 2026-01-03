@@ -1,0 +1,80 @@
+{
+  "discovered_files": {
+    "backend/internal/custom/models/api_key.go": {
+      "description": "ProxyAPIKey model for user-generated proxy API keys. KeyHash is hidden from JSON responses (json:\"-\"). Has relationship to Provider with CASCADE delete. Helper methods: IsExpired(), IsValid(), UpdateLastUsed(). Key prefix constant: \"sk-smoothllm-\"",
+      "category": "model",
+      "discovered_at": "2026-01-03T02:28:59.254853+00:00"
+    },
+    "backend/internal/custom/models/usage.go": {
+      "description": "UsageRecord model for tracking LLM API request usage. Tracks tokens (input/output/total), cost, request duration, status code, and error messages. Has relationships to ProxyAPIKey and Provider with CASCADE delete. Helper methods: CalculateCost(inputCostPer1K, outputCostPer1K), IsError(), IsSuccess().",
+      "category": "model",
+      "discovered_at": "2026-01-03T02:30:28.880743+00:00"
+    },
+    "backend/internal/custom/migrations.go": {
+      "description": "Custom migrations file for auto-migrating Provider, ProxyAPIKey, and UsageRecord models. Uses AutoMigrate function that takes *gorm.DB as parameter, designed to be called from RegisterRoutes().",
+      "category": "database",
+      "discovered_at": "2026-01-03T02:32:05.900498+00:00"
+    },
+    "backend/internal/custom/services/providers.go": {
+      "description": "ProviderService with full CRUD operations for LLM provider management. Key methods: ListProviders(userID), GetProvider(userID, providerID), CreateProvider(userID, req), UpdateProvider(userID, providerID, req), DeleteProvider(userID, providerID), TestConnection(userID, providerID), TestConnectionWithRequest(req), GetProviderByIDInternal(providerID). ProviderResponse excludes APIKey for security. Validates provider_type (openai, anthropic, local), base_url format, and cost values.",
+      "category": "service",
+      "discovered_at": "2026-01-03T02:35:08.105029+00:00"
+    },
+    "backend/internal/custom/handlers/providers.go": {
+      "description": "ProviderHandler for provider API endpoints. Uses NewProviderHandler(providerService) constructor. Implements ListProviders, GetProvider, CreateProvider, UpdateProvider, DeleteProvider, TestConnection, TestConnectionWithCredentials. Uses auth.GetUserID(c) for user authentication and strconv.ParseUint for ID parsing from URL params.",
+      "category": "handlers",
+      "discovered_at": "2026-01-03T02:37:00.324184+00:00"
+    },
+    "backend/internal/custom/handlers/keys.go": {
+      "description": "KeyHandler for proxy API key management endpoints. Uses NewKeyHandler(keyService) constructor. Implements ListKeys, GetKey, CreateKey, UpdateKey, DeleteKey, RevokeKey. Uses auth.GetUserID(c) for user authentication and strconv.ParseUint for ID parsing from URL params. CreateKey returns full key once in response (KeyCreateResponse), subsequent GetKey calls only return key prefix for security.",
+      "category": "handler",
+      "discovered_at": "2026-01-03T02:43:42.947893+00:00"
+    },
+    "backend/internal/custom/services/proxy.go": {
+      "description": "ProxyService for LLM request proxying. Key methods: NewProxyService(keyService, providerService), ValidateAndGetProvider(apiKey), ParseModelName(model, defaultProviderType), ProxyRequest(c, proxyKey, provider), ProxyWithReverseProxy(c, provider, modelInfo), ListModels(provider), GetProxyKeyFromRequest(c). Handles OpenAI\u2192Anthropic request transformation, preserves User-Agent, injects max_tokens for Anthropic. ProxyResult struct captures usage stats for tracking.",
+      "category": "services",
+      "discovered_at": "2026-01-03T02:48:40.520545+00:00"
+    },
+    "backend/internal/custom/handlers/proxy.go": {
+      "description": "ProxyHandler for LLM proxy endpoints. Uses NewProxyHandler(proxyService) constructor. Implements ChatCompletions (POST /v1/chat/completions) and ListModels (GET /v1/models). Unlike other handlers that use JWT auth, proxy handlers authenticate via proxy API key in Authorization header using proxyService.GetProxyKeyFromRequest(c) and ValidateAndGetProvider(). Returns OpenAI-compatible error responses with error.message, error.type, and error.code fields.",
+      "category": "handler",
+      "discovered_at": "2026-01-03T02:50:30.850630+00:00"
+    },
+    "backend/internal/custom/handlers/usage.go": {
+      "description": "UsageHandler for usage statistics endpoints. Uses NewUsageHandler(usageService) constructor. Implements GetUsageSummary, GetDailyUsage, GetUsageByKey, GetUsageByProvider, GetUsageByModel, GetRecentUsage. Uses auth.GetUserID(c) for user authentication. Includes parseQueryParams helper method that extracts common query parameters (start_date, end_date, provider_id, key_id, model, limit, offset) supporting both RFC3339 and YYYY-MM-DD date formats.",
+      "category": "handlers",
+      "discovered_at": "2026-01-03T02:57:58.920469+00:00"
+    },
+    "frontend/src/api/usage.ts": {
+      "description": "Usage API client for frontend. TypeScript interfaces: UsageQueryParams (filtering), UsageSummaryResponse (overall stats), DailyUsageResponse (daily breakdown), UsageByKeyResponse (per-key stats), UsageByProviderResponse (per-provider stats), UsageByModelResponse (per-model stats), UsageRecordResponse (individual records). usageApi object with methods: getUsageSummary, getDailyUsage, getUsageByKey, getUsageByProvider, getUsageByModel, getRecentUsage. Includes buildQueryString helper for constructing URL query parameters from UsageQueryParams.",
+      "category": "frontend-api",
+      "discovered_at": "2026-01-03T03:05:19.403212+00:00"
+    },
+    "frontend/src/stores/usage.ts": {
+      "description": "Usage Pinia store for managing usage statistics. Follows setup store pattern. Key features: stores multiple usage aggregations (summary, daily, by-key, by-provider, by-model, recent records), useful getters (hasUsageData, totalRequests, totalCost, totalTokens, successRate), lookup getters by ID (getUsageByKeyId, getUsageByProviderId, getUsageByModelName), fetchAllUsageData() for parallel loading all data, refreshUsageData() to reload with cached params, and currentParams state for tracking active filters.",
+      "category": "frontend",
+      "discovered_at": "2026-01-03T03:11:08.930048+00:00"
+    },
+    "frontend/src/views/Providers.vue": {
+      "description": "Providers view with full CRUD UI for LLM provider management. Uses AppLayout, Button, Input components. Implements modal-based create/edit forms with Teleport, delete confirmation, test connection functionality. Form fields: name, provider_type (select), base_url, api_key (password), default_model, input/output costs, is_active checkbox. Follows patterns from Dashboard.vue and ProfileEdit.vue with useProvidersStore integration and vue-sonner toast notifications.",
+      "category": "frontend_view",
+      "discovered_at": "2026-01-03T03:14:18.965895+00:00"
+    },
+    "frontend/src/views/ApiKeys.vue": {
+      "description": "ApiKeys view with full CRUD UI for proxy API key management. Features: key list with prefix/provider/last used/expiration display, create modal with provider selection, new key modal with copy functionality (key shown once on creation), revoke/delete confirmation modals, warning when no providers configured. Uses useApiKeysStore and useProvidersStore. Button component only supports variants: primary, secondary, destructive, ghost, outline (no warning variant). Input component type prop only supports: text, email, password, number, tel, url (no date type - use native date input instead).",
+      "category": "frontend_views",
+      "discovered_at": "2026-01-03T03:17:45.378658+00:00"
+    },
+    "frontend/src/views/Usage.vue": {
+      "description": "Usage statistics dashboard view. Displays: summary cards (total requests, tokens, cost, success rate), token breakdown (input/output/avg duration), date range filters, usage tables by provider/model/API key, daily usage breakdown, recent requests with status. Uses useUsageStore for all data (fetchAllUsageData on mount, refreshUsageData for refresh). Format helpers: formatNumber (K/M suffix), formatCurrency (4 decimals), formatPercent (1 decimal), formatDuration (ms/s). Follows Dashboard.vue and ApiKeys.vue patterns with AppLayout wrapper, Button component, vue-sonner toasts.",
+      "category": "frontend-view",
+      "discovered_at": "2026-01-03T03:20:45.869888+00:00"
+    },
+    "backend/internal/custom/": {
+      "description": "Complete custom backend implementation with 13 files: 3 models (provider, api_key, usage), 4 services (providers, keys, proxy, usage), 4 handlers (providers, keys, proxy, usage), routes.go, migrations.go. All API endpoints properly registered with JWT auth for management routes and proxy key auth for LLM endpoints.",
+      "category": "architecture",
+      "discovered_at": "2026-01-03T03:27:07.789694+00:00"
+    }
+  },
+  "last_updated": "2026-01-03T03:27:07.789702+00:00"
+}
