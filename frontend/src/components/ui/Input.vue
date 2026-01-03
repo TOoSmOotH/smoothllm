@@ -15,6 +15,8 @@
       :placeholder="placeholder"
       :disabled="disabled"
       :readonly="readonly"
+      :required="required"
+      :autocomplete="autocomplete"
       :class="inputClasses"
       @input="handleInput"
       @focus="handleFocus"
@@ -47,6 +49,8 @@ interface Props {
   helperText?: string
   disabled?: boolean
   readonly?: boolean
+  required?: boolean
+  autocomplete?: string
   size?: 'sm' | 'md' | 'lg'
 }
 

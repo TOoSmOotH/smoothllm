@@ -31,6 +31,7 @@
             type="email"
             label="Email Address"
             placeholder="user@example.com"
+            autocomplete="email"
             :error="errors.email"
             required
             @enter="handleLogin"
@@ -43,6 +44,7 @@
             type="password"
             label="Password"
             placeholder="Enter your password"
+            autocomplete="current-password"
             :error="errors.password"
             required
             @enter="handleLogin"

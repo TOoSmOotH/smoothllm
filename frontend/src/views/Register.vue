@@ -31,6 +31,7 @@
             type="text"
             label="Username"
             placeholder="username"
+            autocomplete="username"
             :error="errors.username"
             helper-text="3-50 characters, letters, numbers, and underscores"
             required
@@ -44,6 +45,7 @@
             type="email"
             label="Email Address"
             placeholder="user@example.com"
+            autocomplete="email"
             :error="errors.email"
             required
             @enter="handleRegister"
@@ -56,6 +58,7 @@
             type="password"
             label="Password"
             placeholder="Enter a secure password"
+            autocomplete="new-password"
             :error="errors.password"
             helper-text="Minimum 8 characters"
             required
@@ -69,6 +72,7 @@
             type="password"
             label="Confirm Password"
             placeholder="Re-enter your password"
+            autocomplete="new-password"
             :error="errors.confirmPassword"
             required
             @enter="handleRegister"
