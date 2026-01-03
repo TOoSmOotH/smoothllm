@@ -1,0 +1,477 @@
+{
+  "integrations_researched": [
+    {
+      "name": "SmoothWeb Template",
+      "type": "infrastructure",
+      "verified_package": {
+        "name": "smoothweb",
+        "install_command": "N/A - Local template in project",
+        "version": "0.1.0",
+        "verified": true
+      },
+      "api_patterns": {
+        "imports": [
+          "github.com/smoothweb/backend/internal/auth",
+          "github.com/smoothweb/backend/internal/rbac",
+          "github.com/smoothweb/backend/internal/config"
+        ],
+        "initialization": "Custom routes registered via RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies)",
+        "key_functions": [
+          "deps.JWT - JWT authentication service",
+          "deps.RBAC - RBAC middleware for permissions",
+          "deps.DB - GORM database connection",
+          "deps.Config - Application configuration"
+        ],
+        "verified_against": "docs/CUSTOMIZATION.md in local codebase"
+      },
+      "configuration": {
+        "env_vars": [],
+        "config_files": [
+          "frontend/src/custom/appConfig.ts",
+          "frontend/src/custom/routes.ts",
+          "backend/internal/custom/routes.go"
+        ],
+        "dependencies": []
+      },
+      "infrastructure": {
+        "requires_docker": false,
+        "backend_framework": "Gin (Go)",
+        "frontend_framework": "Vue 3 with TypeScript",
+        "database": "SQLite via GORM",
+        "authentication": "JWT-based",
+        "authorization": "Casbin RBAC"
+      },
+      "gotchas": [
+        "Keep customizations in frontend/src/custom/* and backend/internal/custom/* to minimize merge conflicts",
+        "Avoid editing core files when possible",
+        "Use deps.JWT and deps.RBAC for protected routes"
+      ],
+      "research_sources": [
+        "Local file: docs/CUSTOMIZATION.md",
+        "Local file: backend/internal/custom/routes.go",
+        "Local file: backend/go.mod"
+      ]
+    },
+    {
+      "name": "LiteLLM",
+      "type": "reference_implementation",
+      "verified_package": {
+        "name": "litellm",
+        "install_command": "pip install litellm",
+        "version": ">=1.80.0",
+        "verified": true
+      },
+      "api_patterns": {
+        "model_naming_convention": {
+          "description": "Provider prefix followed by model name",
+          "examples": {
+            "openai": "openai/gpt-4o",
+            "anthropic": "anthropic/claude-sonnet-4-20250514",
+            "azure": "azure/my_azure_deployment",
+            "huggingface": "huggingface/<model_name>",
+            "local_openai_compatible": "openai/<model_name> with custom api_base"
+          }
+        },
+        "virtual_keys": {
+          "format": "sk-{random_string}",
+          "description": "Similar to OpenAI's key structure",
+          "features": [
+            "max_budget - Maximum spend limit",
+            "soft_budget - Warning threshold",
+            "rate limits - TPM and RPM quotas",
+            "model access restrictions"
+          ]
+        },
+        "config_yaml_structure": {
+          "example": {
+            "model_list": [
+              {
+                "model_name": "gpt-4o",
+                "litellm_params": {
+                  "model": "azure/my_azure_deployment",
+                  "api_base": "os.environ/AZURE_API_BASE",
+                  "api_key": "os.environ/AZURE_API_KEY"
+                }
+              }
+            ]
+          }
+        },
+        "spend_tracking": {
+          "tables": [
+            "LiteLLM_VerificationTokenTable - Key spend",
+            "LiteLLM_UserTable - User spend",
+            "LiteLLM_TeamTable - Team spend"
+          ],
+          "endpoints": [
+            "/user/daily/activity - Daily usage breakdown by model, provider, key"
+          ]
+        },
+        "verified_against": "https://docs.litellm.ai/"
+      },
+      "configuration": {
+        "env_vars": [
+          "PROXY_MASTER_KEY - Admin key for full control",
+          "OPENAI_API_KEY",
+          "ANTHROPIC_API_KEY",
+          "AZURE_API_KEY",
+          "AZURE_API_BASE"
+        ],
+        "config_files": [
+          "config.yaml - Model list and routing configuration"
+        ],
+        "dependencies": []
+      },
+      "infrastructure": {
+        "requires_docker": false,
+        "database": "Optional - PostgreSQL for virtual keys and spend tracking"
+      },
+      "gotchas": [
+        "model_name is what clients request, model in litellm_params is the actual provider route",
+        "Wildcard routes (model_name: '*') do not support load balancing",
+        "PROXY_MASTER_KEY gives admin access - keep secure",
+        "Key rotation requires connected database"
+      ],
+      "research_sources": [
+        "https://docs.litellm.ai/docs/proxy/virtual_keys",
+        "https://docs.litellm.ai/docs/proxy/configs",
+        "https://docs.litellm.ai/docs/proxy/cost_tracking",
+        "https://github.com/BerriAI/litellm",
+        "https://pypi.org/project/litellm/",
+        "Context7 MCP: /berriai/litellm, /websites/litellm_ai"
+      ]
+    },
+    {
+      "name": "OpenAI API",
+      "type": "external_api",
+      "verified_package": {
+        "name": "OpenAI API",
+        "install_command": "N/A - HTTP API",
+        "version": "v1",
+        "verified": true
+      },
+      "api_patterns": {
+        "base_url": "https://api.openai.com/v1",
+        "chat_completions_endpoint": "/chat/completions",
+        "authentication": "Bearer token in Authorization header",
+        "request_format": {
+          "messages": "array of message objects",
+          "model": "model identifier string",
+          "max_tokens": "optional token limit",
+          "stream": "optional boolean for streaming"
+        },
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY",
+          "Content-Type": "application/json"
+        },
+        "verified_against": "https://platform.openai.com/docs/api-reference/chat"
+      },
+      "configuration": {
+        "env_vars": [
+          "OPENAI_API_KEY"
+        ],
+        "config_files": [],
+        "dependencies": []
+      },
+      "infrastructure": {
+        "requires_docker": false
+      },
+      "gotchas": [
+        "API keys should be kept secret",
+        "Rate limits apply per organization",
+        "Streaming responses use SSE format",
+        "New Responses API is recommended for new projects but Chat Completions remains supported"
+      ],
+      "research_sources": [
+        "https://platform.openai.com/docs/api-reference/chat",
+        "https://platform.openai.com/docs/api-reference/introduction"
+      ]
+    },
+    {
+      "name": "Anthropic Claude API",
+      "type": "external_api",
+      "verified_package": {
+        "name": "Anthropic API",
+        "install_command": "N/A - HTTP API",
+        "version": "2023-06-01 (anthropic-version header)",
+        "verified": true
+      },
+      "api_patterns": {
+        "base_url": "https://api.anthropic.com/v1",
+        "messages_endpoint": "/messages",
+        "authentication": "x-api-key header",
+        "request_format": {
+          "messages": "array of message objects",
+          "model": "model identifier string",
+          "max_tokens": "required token limit"
+        },
+        "headers": {
+          "x-api-key": "YOUR_API_KEY",
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json"
+        },
+        "response_headers": {
+          "request-id": "globally unique request identifier",
+          "anthropic-organization-id": "org ID for the API key"
+        },
+        "verified_against": "https://docs.anthropic.com/"
+      },
+      "configuration": {
+        "env_vars": [
+          "ANTHROPIC_API_KEY"
+        ],
+        "config_files": [],
+        "dependencies": []
+      },
+      "infrastructure": {
+        "requires_docker": false
+      },
+      "gotchas": [
+        "max_tokens is REQUIRED for Claude API (unlike OpenAI)",
+        "Uses x-api-key header not Authorization header",
+        "anthropic-version header required for API versioning",
+        "Different message format from OpenAI"
+      ],
+      "research_sources": [
+        "https://docs.anthropic.com/claude/reference/getting-started-with-the-api",
+        "https://github.com/anthropics/anthropic-sdk-python"
+      ]
+    },
+    {
+      "name": "Gin Web Framework",
+      "type": "library",
+      "verified_package": {
+        "name": "github.com/gin-gonic/gin",
+        "install_command": "go get -u github.com/gin-gonic/gin",
+        "version": "v1.9.1",
+        "verified": true
+      },
+      "api_patterns": {
+        "imports": [
+          "github.com/gin-gonic/gin"
+        ],
+        "initialization": "router := gin.Default()",
+        "key_functions": [
+          "router.GET/POST/PUT/DELETE(path, handler)",
+          "router.Group(path) - route grouping",
+          "c.Request.Header - access request headers",
+          "c.JSON(status, obj) - JSON response"
+        ],
+        "verified_against": "https://gin-gonic.com/docs/"
+      },
+      "configuration": {
+        "env_vars": [],
+        "config_files": [],
+        "dependencies": []
+      },
+      "infrastructure": {
+        "requires_docker": false
+      },
+      "gotchas": [
+        "Default trusts all proxies - use SetTrustedProxies(nil) for direct connections",
+        "RemoteIPHeaders configures client IP detection behind proxies",
+        "For reverse proxy: use httputil.ReverseProxy with proper Rewrite function"
+      ],
+      "research_sources": [
+        "https://pkg.go.dev/github.com/gin-gonic/gin",
+        "https://gin-gonic.com/docs/",
+        "Local file: backend/go.mod"
+      ]
+    },
+    {
+      "name": "Go httputil ReverseProxy",
+      "type": "library",
+      "verified_package": {
+        "name": "net/http/httputil",
+        "install_command": "N/A - Go standard library",
+        "version": "Go 1.21+",
+        "verified": true
+      },
+      "api_patterns": {
+        "imports": [
+          "net/http/httputil"
+        ],
+        "initialization": "proxy := &httputil.ReverseProxy{Rewrite: func(r *httputil.ProxyRequest) {...}}",
+        "key_functions": [
+          "httputil.NewSingleHostReverseProxy(url) - basic reverse proxy",
+          "ReverseProxy.Rewrite - modern API for request modification",
+          "ProxyRequest.SetURL(url) - set target URL",
+          "ProxyRequest.In / ProxyRequest.Out - inbound/outbound request access"
+        ],
+        "user_agent_preservation": {
+          "description": "By default, ReverseProxy blanks User-Agent if not set. To preserve original:",
+          "code": "r.Out.Header[\"User-Agent\"] = r.In.Header[\"User-Agent\"]"
+        },
+        "verified_against": "https://pkg.go.dev/net/http/httputil"
+      },
+      "configuration": {
+        "env_vars": [],
+        "config_files": [],
+        "dependencies": []
+      },
+      "infrastructure": {
+        "requires_docker": false
+      },
+      "gotchas": [
+        "Use Rewrite API instead of deprecated Director for proper header handling",
+        "Hop-by-hop headers are automatically removed (Connection, Keep-Alive, etc.)",
+        "X-Forwarded-* headers are removed before Rewrite is called",
+        "Must explicitly preserve User-Agent and other custom headers from inbound request"
+      ],
+      "research_sources": [
+        "https://pkg.go.dev/net/http/httputil",
+        "https://go.dev/src/net/http/httputil/reverseproxy.go",
+        "https://github.com/golang/go/issues/15524"
+      ]
+    },
+    {
+      "name": "GORM",
+      "type": "library",
+      "verified_package": {
+        "name": "gorm.io/gorm",
+        "install_command": "go get -u gorm.io/gorm",
+        "version": "v1.25.0",
+        "verified": true
+      },
+      "api_patterns": {
+        "imports": [
+          "gorm.io/gorm",
+          "gorm.io/driver/sqlite"
+        ],
+        "initialization": "db, err := gorm.Open(sqlite.Open(\"test.db\"), &gorm.Config{})",
+        "key_functions": [
+          "db.AutoMigrate(&Model{}) - automatic schema migration",
+          "db.Create(&obj) - insert record",
+          "db.First(&obj, id) - find by primary key",
+          "db.Where(condition).Find(&objs) - query records"
+        ],
+        "verified_against": "https://gorm.io/docs/"
+      },
+      "configuration": {
+        "env_vars": [],
+        "config_files": [],
+        "dependencies": [
+          "gorm.io/driver/sqlite",
+          "gorm.io/driver/postgres",
+          "gorm.io/driver/mysql"
+        ]
+      },
+      "infrastructure": {
+        "requires_docker": false
+      },
+      "gotchas": [
+        "Already included in smoothweb template",
+        "Use AutoMigrate for schema changes",
+        "Supports associations, hooks, transactions"
+      ],
+      "research_sources": [
+        "https://gorm.io/docs/",
+        "Context7 MCP: /websites/gorm_io",
+        "Local file: backend/go.mod"
+      ]
+    },
+    {
+      "name": "Vue 3",
+      "type": "library",
+      "verified_package": {
+        "name": "vue",
+        "install_command": "npm install vue",
+        "version": "^3.4.0",
+        "verified": true
+      },
+      "api_patterns": {
+        "imports": [
+          "import { ref, computed, onMounted } from 'vue'",
+          "import { useRouter } from 'vue-router'"
+        ],
+        "initialization": "Already configured in smoothweb template",
+        "key_functions": [
+          "Composition API with <script setup>",
+          "Pinia for state management",
+          "Vue Router for navigation"
+        ],
+        "verified_against": "https://vuejs.org/"
+      },
+      "configuration": {
+        "env_vars": [],
+        "config_files": [
+          "vite.config.ts"
+        ],
+        "dependencies": [
+          "pinia",
+          "vue-router",
+          "axios",
+          "tailwindcss"
+        ]
+      },
+      "infrastructure": {
+        "requires_docker": false
+      },
+      "gotchas": [
+        "Already configured in smoothweb template",
+        "Add custom routes via frontend/src/custom/routes.ts",
+        "Add custom config via frontend/src/custom/appConfig.ts"
+      ],
+      "research_sources": [
+        "https://vuejs.org/",
+        "Context7 MCP: /vuejs/docs",
+        "Local file: frontend/package.json"
+      ]
+    }
+  ],
+  "unverified_claims": [
+    {
+      "claim": "Smooth LLM Proxy should use client's original user-agent for provider requests",
+      "reason": "Verified approach: Go's httputil.ReverseProxy with Rewrite function can preserve original User-Agent header",
+      "risk_level": "low",
+      "resolution": "Use r.Out.Header['User-Agent'] = r.In.Header['User-Agent'] in Rewrite function"
+    },
+    {
+      "claim": "Users specify costs of LLM for tracking",
+      "reason": "Not a technical integration - this is a business logic requirement. LiteLLM does automatic cost tracking but user-defined costs are simpler to implement",
+      "risk_level": "low",
+      "resolution": "Store user-defined cost-per-token in database, calculate based on token usage"
+    }
+  ],
+  "recommendations": [
+    "Follow LiteLLM's model naming convention (provider/model) for familiarity and client compatibility",
+    "Use OpenAI-compatible API format for the proxy endpoint to support existing tools",
+    "Implement virtual keys similar to LiteLLM (sk-{random_string} format) for client authentication",
+    "Use httputil.ReverseProxy with Rewrite function to properly preserve User-Agent and other headers",
+    "Store provider API keys encrypted in database with GORM",
+    "Track token usage per request for cost calculation (input tokens + output tokens)",
+    "Consider supporting both OpenAI and Anthropic API formats since they differ in authentication headers",
+    "Use smoothweb's existing JWT auth for web UI and custom proxy API keys for LLM client authentication"
+  ],
+  "api_compatibility_notes": {
+    "openai_format": {
+      "endpoint": "/v1/chat/completions",
+      "auth": "Authorization: Bearer <key>",
+      "body": {
+        "model": "string",
+        "messages": "array",
+        "max_tokens": "optional int",
+        "stream": "optional bool"
+      }
+    },
+    "anthropic_format": {
+      "endpoint": "/v1/messages",
+      "auth": "x-api-key: <key>",
+      "headers": {
+        "anthropic-version": "2023-06-01"
+      },
+      "body": {
+        "model": "string",
+        "messages": "array",
+        "max_tokens": "required int"
+      }
+    },
+    "recommendation": "Primary proxy endpoint should use OpenAI format for widest client compatibility, then translate internally for different providers"
+  },
+  "context7_libraries_used": [
+    "/berriai/litellm",
+    "/websites/litellm_ai",
+    "/websites/gorm_io",
+    "/vuejs/docs"
+  ],
+  "created_at": "2026-01-02T12:00:00Z"
+}

@@ -1,0 +1,116 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: Smooth LLM Proxy
+Workspace: smoothllm
+Started: 2026-01-02
+
+Workflow Type: feature
+Rationale: Adding substantial new LLM proxy capabilities to an existing smoothweb template. Requires new database models, API endpoints, services, and frontend views while leveraging existing auth, RBAC, and user management infrastructure.
+
+Session 1 (Planner):
+- Created implementation_plan.json
+- Phases: 10
+- Total subtasks: 28
+- Created init.sh
+- Created context.json with investigation findings
+
+Phase Summary:
+- Phase 1 (Database Models & Migrations): 4 subtasks, depends on []
+- Phase 2 (Provider Management Backend): 3 subtasks, depends on [phase-1-database]
+- Phase 3 (API Key Management Backend): 3 subtasks, depends on [phase-2-provider-backend]
+- Phase 4 (LLM Proxy Backend): 3 subtasks, depends on [phase-3-keys-backend]
+- Phase 5 (Usage Tracking Backend): 3 subtasks, depends on [phase-4-proxy-backend]
+- Phase 6 (Frontend API Layer): 3 subtasks, depends on [phase-5-usage-backend]
+- Phase 7 (Frontend Stores): 3 subtasks, depends on [phase-6-frontend-api]
+- Phase 8 (Frontend Views): 3 subtasks, depends on [phase-7-frontend-stores]
+- Phase 9 (Frontend Configuration): 2 subtasks, depends on [phase-8-frontend-views]
+- Phase 10 (Integration Testing): 3 subtasks, depends on [phase-9-frontend-config]
+
+Services Involved:
+- backend (primary): Go/Gin API server - proxy endpoints, key management, usage tracking, provider routing
+- frontend (integration): Vue 3 UI - key management dashboard, provider configuration, usage statistics views
+
+Files to Create (18):
+Backend Models:
+  - backend/internal/custom/models/provider.go
+  - backend/internal/custom/models/api_key.go
+  - backend/internal/custom/models/usage.go
+Backend Services:
+  - backend/internal/custom/services/providers.go
+  - backend/internal/custom/services/keys.go
+  - backend/internal/custom/services/proxy.go
+  - backend/internal/custom/services/usage.go
+Backend Handlers:
+  - backend/internal/custom/handlers/providers.go
+  - backend/internal/custom/handlers/keys.go
+  - backend/internal/custom/handlers/proxy.go
+  - backend/internal/custom/handlers/usage.go
+Backend Migrations:
+  - backend/internal/custom/migrations.go
+Frontend API:
+  - frontend/src/api/providers.ts
+  - frontend/src/api/keys.ts
+  - frontend/src/api/usage.ts
+Frontend Stores:
+  - frontend/src/stores/providers.ts
+  - frontend/src/stores/apiKeys.ts
+  - frontend/src/stores/usage.ts
+Frontend Views:
+  - frontend/src/views/Providers.vue
+  - frontend/src/views/ApiKeys.vue
+  - frontend/src/views/Usage.vue
+
+Files to Modify (5):
+  - backend/internal/custom/routes.go (register all routes)
+  - frontend/src/custom/appConfig.ts (branding and navigation)
+  - frontend/src/custom/routes.ts (custom page routes)
+  - backend/internal/custom/services/proxy.go (integrate usage tracking)
+
+Key Patterns Identified:
+- Backend handler: Struct with service injection via NewXXXHandler
+- Backend service: Struct with *gorm.DB via NewXXXService
+- Backend model: gorm.Model, json:"-" for secrets, GORM tags
+- Backend routes: deps.JWT middleware, auth.GetUserID(c)
+- Frontend store: Pinia composition API with ref/computed
+- Frontend view: Vue 3 script setup with AppLayout
+
+Critical Implementation Notes:
+- NEVER expose provider API keys (use json:"-" tag)
+- Preserve client User-Agent in proxy requests
+- Transform OpenAI format to Anthropic when routing to Anthropic providers
+- Inject max_tokens for Anthropic if missing (default: 4096)
+- Use x-api-key header for Anthropic, Bearer for OpenAI
+- Keep all custom code in /custom/ directories
+
+Parallelism Analysis:
+- Max parallel phases: 3
+- Recommended workers: 1 (sequential due to tight dependencies)
+- All backend phases are sequential (each builds on previous)
+- Frontend phases can run in parallel but depend on backend completion
+
+Verification Strategy:
+- Risk level: HIGH (API key security critical)
+- Security scanning: REQUIRED
+- Test types: unit, integration, e2e
+- Build verification: Go build + TypeScript type-check + Frontend build
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 1
+
+To start the development environment manually:
+
+  # Terminal 1 - Backend
+  cd backend && go run cmd/api/main.go
+
+  # Terminal 2 - Frontend
+  cd frontend && npm run dev
+
+Service URLs:
+  - Backend API: http://localhost:8080
+  - Frontend: http://localhost:5173
+  - Health Check: http://localhost:8080/health
+
+=== END SESSION 1 ===

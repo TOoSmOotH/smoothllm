@@ -1,0 +1,45 @@
+{
+  "task_description": "Build Smooth LLM Proxy - a LiteLLM-inspired API key management and LLM usage tracking system on top of the smoothweb template",
+  "scoped_services": ["backend", "frontend"],
+  "files_to_modify": {
+    "backend": ["backend/internal/custom/routes.go"],
+    "frontend": ["frontend/src/custom/appConfig.ts", "frontend/src/custom/routes.ts"]
+  },
+  "files_to_reference": [
+    "backend/internal/handlers/auth.go",
+    "backend/internal/services/profile_service.go",
+    "backend/internal/models/user.go",
+    "backend/internal/auth/middleware.go",
+    "frontend/src/stores/auth.ts",
+    "frontend/src/api/client.ts",
+    "frontend/src/views/Dashboard.vue",
+    "frontend/src/config/appConfig.ts",
+    "frontend/src/router/coreRoutes.ts"
+  ],
+  "patterns": {
+    "backend_handler": "Struct with service injection via NewXXXHandler constructor. Use auth.GetUserID(c) for user context. Use c.ShouldBindJSON for request parsing. Return c.JSON with status codes.",
+    "backend_service": "Struct with db *gorm.DB dependency via NewXXXService constructor. Methods operate on GORM models.",
+    "backend_model": "Use gorm.Model for ID/timestamps. json:\"-\" for sensitive fields. GORM tags for indexes/constraints. Define relationships with foreignKey.",
+    "backend_routes": "Use deps.JWT middleware for protected routes. Register in custom/routes.go RegisterRoutes function.",
+    "frontend_store": "Pinia store with composition API. ref() for state, computed() for getters, async functions for actions.",
+    "frontend_api": "Create axios functions that call apiClient from @/api/client.ts",
+    "frontend_view": "Vue 3 Composition API with script setup. Import stores and router. Use AppLayout wrapper.",
+    "frontend_routes": "RouteRecordRaw with lazy loading imports. meta.requiresAuth for protected pages."
+  },
+  "existing_implementations": {
+    "description": "SmoothWeb template provides complete user management, JWT auth, RBAC, and UI theming. All custom code should go in /custom/ directories.",
+    "relevant_files": [
+      "backend/internal/custom/routes.go - Entry point for custom backend routes",
+      "frontend/src/custom/appConfig.ts - Override branding and navigation",
+      "frontend/src/custom/routes.ts - Add custom frontend routes"
+    ]
+  },
+  "critical_decisions": {
+    "code_isolation": "All custom code in backend/internal/custom/ subdirectories. Never modify core template files.",
+    "migrations": "Create backend/internal/custom/migrations.go, call from RegisterRoutes(). Do NOT modify database/migrations.go",
+    "api_key_security": "Use json:\"-\" tag to never expose provider API keys. Hash proxy keys before storage.",
+    "request_format": "Accept OpenAI format on /v1/chat/completions. Transform to Anthropic format when routing to Anthropic providers.",
+    "user_agent": "Preserve client User-Agent header when proxying: r.Out.Header[\"User-Agent\"] = r.In.Header[\"User-Agent\"]"
+  },
+  "created_at": "2026-01-02T21:09:33.792226"
+}

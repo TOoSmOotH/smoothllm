@@ -1,0 +1,688 @@
+{
+  "feature": "Smooth LLM Proxy - API Key Management and Usage Tracking",
+  "workflow_type": "feature",
+  "workflow_rationale": "Adding substantial new LLM proxy capabilities to an existing smoothweb template. Requires new database models, API endpoints, services, and frontend views while leveraging existing auth, RBAC, and user management infrastructure.",
+  "phases": [
+    {
+      "id": "phase-1-database",
+      "name": "Database Models & Migrations",
+      "type": "implementation",
+      "description": "Create the database models and migrations for providers, API keys, and usage tracking",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create Provider model for LLM provider configurations",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/models/provider.go"],
+          "patterns_from": ["backend/internal/models/user.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Create ProxyAPIKey model for user-generated proxy keys",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/models/api_key.go"],
+          "patterns_from": ["backend/internal/models/user.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Create UsageRecord model for tracking LLM usage",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/models/usage.go"],
+          "patterns_from": ["backend/internal/models/user.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-4",
+          "description": "Create custom migrations to auto-migrate new models",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/migrations.go"],
+          "patterns_from": ["backend/internal/database/migrations.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-provider-backend",
+      "name": "Provider Management Backend",
+      "type": "implementation",
+      "description": "Build the provider CRUD service, handlers, and routes",
+      "depends_on": ["phase-1-database"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Create provider service with CRUD operations",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/services/providers.go"],
+          "patterns_from": ["backend/internal/services/profile_service.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Create provider handlers for API endpoints",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/handlers/providers.go"],
+          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Register provider routes in custom routes.go",
+          "service": "backend",
+          "files_to_modify": ["backend/internal/custom/routes.go"],
+          "files_to_create": [],
+          "patterns_from": ["backend/internal/custom/routes.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go run cmd/api/main.go &>/dev/null & sleep 3 && curl -s http://localhost:8080/health && pkill -f 'go run'",
+            "expected": "Server starts and health check responds"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-keys-backend",
+      "name": "API Key Management Backend",
+      "type": "implementation",
+      "description": "Build the proxy API key management service, handlers, and routes",
+      "depends_on": ["phase-2-provider-backend"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Create keys service with key generation and hashing",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/services/keys.go"],
+          "patterns_from": ["backend/internal/services/profile_service.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Create keys handlers for API key CRUD endpoints",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/handlers/keys.go"],
+          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-3",
+          "description": "Register keys routes in custom routes.go",
+          "service": "backend",
+          "files_to_modify": ["backend/internal/custom/routes.go"],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-proxy-backend",
+      "name": "LLM Proxy Backend",
+      "type": "implementation",
+      "description": "Build the LLM request proxy service with model routing and request transformation",
+      "depends_on": ["phase-3-keys-backend"],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create proxy service with reverse proxy, model routing, and provider-specific request transformation",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/services/proxy.go"],
+          "patterns_from": [],
+          "notes": "Critical: Preserve User-Agent header. Transform OpenAI format to Anthropic when needed. Inject max_tokens for Anthropic if missing.",
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Create proxy handler for /v1/chat/completions endpoint",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/handlers/proxy.go"],
+          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Register proxy routes (outside /api/v1 group for OpenAI compatibility)",
+          "service": "backend",
+          "files_to_modify": ["backend/internal/custom/routes.go"],
+          "files_to_create": [],
+          "patterns_from": [],
+          "notes": "Proxy endpoint at /v1/chat/completions uses proxy API key auth, not JWT",
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-usage-backend",
+      "name": "Usage Tracking Backend",
+      "type": "implementation",
+      "description": "Build the usage tracking service, handlers, and routes",
+      "depends_on": ["phase-4-proxy-backend"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Create usage service for recording and querying usage data",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/services/usage.go"],
+          "patterns_from": ["backend/internal/services/profile_service.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Create usage handlers for statistics endpoints",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": ["backend/internal/custom/handlers/usage.go"],
+          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-3",
+          "description": "Register usage routes and integrate usage recording into proxy",
+          "service": "backend",
+          "files_to_modify": ["backend/internal/custom/routes.go", "backend/internal/custom/services/proxy.go"],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd backend && go build ./...",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-frontend-api",
+      "name": "Frontend API Layer",
+      "type": "implementation",
+      "description": "Create the frontend API clients for providers, keys, and usage",
+      "depends_on": ["phase-5-usage-backend"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Create providers API client",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/api/providers.ts"],
+          "patterns_from": ["frontend/src/api/client.ts", "frontend/src/api/profile.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Create keys API client",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/api/keys.ts"],
+          "patterns_from": ["frontend/src/api/client.ts", "frontend/src/api/profile.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-6-3",
+          "description": "Create usage API client",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/api/usage.ts"],
+          "patterns_from": ["frontend/src/api/client.ts", "frontend/src/api/profile.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-7-frontend-stores",
+      "name": "Frontend Stores",
+      "type": "implementation",
+      "description": "Create Pinia stores for providers, keys, and usage state management",
+      "depends_on": ["phase-6-frontend-api"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-7-1",
+          "description": "Create providers Pinia store",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/stores/providers.ts"],
+          "patterns_from": ["frontend/src/stores/auth.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-7-2",
+          "description": "Create apiKeys Pinia store",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/stores/apiKeys.ts"],
+          "patterns_from": ["frontend/src/stores/auth.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-7-3",
+          "description": "Create usage Pinia store",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/stores/usage.ts"],
+          "patterns_from": ["frontend/src/stores/auth.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-8-frontend-views",
+      "name": "Frontend Views",
+      "type": "implementation",
+      "description": "Create the Vue components for providers, keys, and usage pages",
+      "depends_on": ["phase-7-frontend-stores"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-8-1",
+          "description": "Create Providers view with CRUD UI",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/views/Providers.vue"],
+          "patterns_from": ["frontend/src/views/Dashboard.vue", "frontend/src/views/ProfileEdit.vue"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-8-2",
+          "description": "Create ApiKeys view with key management UI",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/views/ApiKeys.vue"],
+          "patterns_from": ["frontend/src/views/Dashboard.vue"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-8-3",
+          "description": "Create Usage view with statistics dashboard",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": ["frontend/src/views/Usage.vue"],
+          "patterns_from": ["frontend/src/views/Dashboard.vue"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-9-frontend-config",
+      "name": "Frontend Configuration",
+      "type": "implementation",
+      "description": "Update app configuration with branding and navigation for Smooth LLM Proxy",
+      "depends_on": ["phase-8-frontend-views"],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-9-1",
+          "description": "Update customAppConfig with Smooth LLM Proxy branding and navigation",
+          "service": "frontend",
+          "files_to_modify": ["frontend/src/custom/appConfig.ts"],
+          "files_to_create": [],
+          "patterns_from": ["frontend/src/config/appConfig.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-9-2",
+          "description": "Add custom routes for providers, keys, and usage pages",
+          "service": "frontend",
+          "files_to_modify": ["frontend/src/custom/routes.ts"],
+          "files_to_create": [],
+          "patterns_from": ["frontend/src/router/coreRoutes.ts"],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run type-check",
+            "expected": "Type check passes"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-10-integration",
+      "name": "Integration Testing",
+      "type": "integration",
+      "description": "End-to-end verification of all features working together",
+      "depends_on": ["phase-9-frontend-config"],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-10-1",
+          "description": "Verify backend API endpoints work correctly",
+          "all_services": false,
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "api",
+            "method": "GET",
+            "url": "http://localhost:8080/health",
+            "expected_status": 200
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-10-2",
+          "description": "Verify frontend builds and serves correctly",
+          "all_services": false,
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd frontend && npm run build",
+            "expected": "Build succeeds with no errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-10-3",
+          "description": "End-to-end verification of complete flow",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "1. Start backend with 'cd backend && go run cmd/api/main.go'",
+              "2. Start frontend with 'cd frontend && npm run dev'",
+              "3. Register a new user at http://localhost:5173/register",
+              "4. Navigate to Providers page and add a provider",
+              "5. Navigate to API Keys page and create a proxy key",
+              "6. Test proxy endpoint with curl",
+              "7. Verify usage appears in Usage dashboard"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 10,
+    "total_subtasks": 28,
+    "services_involved": ["backend", "frontend"],
+    "estimated_files_to_create": 18,
+    "estimated_files_to_modify": 5,
+    "parallelism": {
+      "max_parallel_phases": 3,
+      "parallel_groups": [
+        {
+          "phases": ["phase-6-frontend-api"],
+          "reason": "Frontend API can be developed after backend is complete"
+        },
+        {
+          "phases": ["phase-7-frontend-stores"],
+          "reason": "Frontend stores depend on API layer"
+        },
+        {
+          "phases": ["phase-8-frontend-views"],
+          "reason": "Frontend views depend on stores"
+        }
+      ],
+      "recommended_workers": 1,
+      "speedup_estimate": "Sequential execution recommended for this feature due to tight dependencies between phases"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 1"
+  },
+  "verification_strategy": {
+    "risk_level": "high",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": ["unit", "integration", "e2e"],
+    "security_scanning_required": true,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All Go code compiles without errors",
+      "All TypeScript code passes type checking",
+      "Frontend builds successfully",
+      "Backend health check responds",
+      "Provider CRUD operations work via API",
+      "API key generation and validation work",
+      "Proxy forwards requests to providers correctly",
+      "Usage tracking records requests accurately",
+      "Provider API keys are never exposed in API responses",
+      "Client User-Agent is preserved in proxied requests"
+    ],
+    "verification_steps": [
+      {
+        "name": "Backend Build",
+        "command": "cd backend && go build ./...",
+        "expected_outcome": "Build succeeds with no errors",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Frontend Type Check",
+        "command": "cd frontend && npm run type-check",
+        "expected_outcome": "No type errors",
+        "type": "lint",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Frontend Build",
+        "command": "cd frontend && npm run build",
+        "expected_outcome": "Build succeeds",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Backend Unit Tests",
+        "command": "cd backend && go test ./...",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Frontend Unit Tests",
+        "command": "cd frontend && npm test -- --run",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": false
+      },
+      {
+        "name": "Secrets Scan",
+        "command": "grep -rn 'sk-' --include='*.go' --include='*.ts' backend/ frontend/ | grep -v 'sk-smoothllm' | grep -v 'sk-{' | head -5",
+        "expected_outcome": "No hardcoded API keys found",
+        "type": "security",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "High risk due to API key management security requirements. Requires comprehensive testing to ensure keys are never exposed and proxy correctly handles provider authentication."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": ["cd backend && go test ./...", "cd frontend && npm test -- --run"],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": ["cd backend && go test -tags=integration ./..."],
+      "services_to_test": ["backend"]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": ["cd frontend && npx playwright test"],
+      "flows": ["provider-crud", "key-management", "proxy-request"]
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {"url": "http://localhost:5173/", "checks": ["Branding shows 'Smooth LLM Proxy'", "No console errors"]},
+        {"url": "http://localhost:5173/providers", "checks": ["Page renders", "Can add provider form visible"]},
+        {"url": "http://localhost:5173/keys", "checks": ["Page renders", "Can create key button visible"]},
+        {"url": "http://localhost:5173/usage", "checks": ["Page renders", "Usage stats display"]}
+      ]
+    },
+    "database_verification": {
+      "required": true,
+      "checks": ["providers table exists", "proxy_api_keys table exists", "usage_records table exists", "Foreign keys configured correctly"]
+    },
+    "api_verification": {
+      "required": true,
+      "endpoints": [
+        {"method": "GET", "path": "/api/v1/providers", "auth": "jwt", "expected_status": 200},
+        {"method": "POST", "path": "/api/v1/providers", "auth": "jwt", "expected_status": 201},
+        {"method": "GET", "path": "/api/v1/keys", "auth": "jwt", "expected_status": 200},
+        {"method": "POST", "path": "/api/v1/keys", "auth": "jwt", "expected_status": 201},
+        {"method": "GET", "path": "/api/v1/usage", "auth": "jwt", "expected_status": 200},
+        {"method": "POST", "path": "/v1/chat/completions", "auth": "proxy_key", "expected_status": 200}
+      ]
+    },
+    "security_verification": {
+      "required": true,
+      "checks": [
+        "Provider API keys never returned in GET responses (json:\"-\" tag)",
+        "Proxy keys are hashed before storage",
+        "User can only access their own providers and keys",
+        "Proxy endpoint validates proxy key before forwarding"
+      ]
+    }
+  },
+  "qa_signoff": null
+}
