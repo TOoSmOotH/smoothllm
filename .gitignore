@@ -52,3 +52,7 @@ backend/uploads/
 Thumbs.db
 .idea/
 .vscode/
+
+# Auto-claude
+.auto-claude/
+.worktrees/
