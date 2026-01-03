@@ -475,19 +475,19 @@ func (s *ProxyService) ListModels(provider *models.Provider) (interface{}, error
 
 	// Return a standardized list based on provider type
 	// If the provider has a default model, include it in the list
-	models := []Model{}
+	modelList := []Model{}
 	now := time.Now().Unix()
 
 	switch provider.ProviderType {
 	case models.ProviderTypeOpenAI:
-		models = append(models,
+		modelList = append(modelList,
 			Model{ID: "openai/gpt-4o", Object: "model", Created: now, OwnedBy: "openai"},
 			Model{ID: "openai/gpt-4o-mini", Object: "model", Created: now, OwnedBy: "openai"},
 			Model{ID: "openai/gpt-4-turbo", Object: "model", Created: now, OwnedBy: "openai"},
 			Model{ID: "openai/gpt-3.5-turbo", Object: "model", Created: now, OwnedBy: "openai"},
 		)
 	case models.ProviderTypeAnthropic:
-		models = append(models,
+		modelList = append(modelList,
 			Model{ID: "anthropic/claude-sonnet-4-20250514", Object: "model", Created: now, OwnedBy: "anthropic"},
 			Model{ID: "anthropic/claude-opus-4-20250514", Object: "model", Created: now, OwnedBy: "anthropic"},
 			Model{ID: "anthropic/claude-3-5-sonnet-20241022", Object: "model", Created: now, OwnedBy: "anthropic"},
@@ -496,7 +496,7 @@ func (s *ProxyService) ListModels(provider *models.Provider) (interface{}, error
 	case models.ProviderTypeLocal:
 		// For local providers, just return the default model if configured
 		if provider.DefaultModel != "" {
-			models = append(models,
+			modelList = append(modelList,
 				Model{ID: "local/" + provider.DefaultModel, Object: "model", Created: now, OwnedBy: "local"},
 			)
 		}
@@ -506,25 +506,25 @@ func (s *ProxyService) ListModels(provider *models.Provider) (interface{}, error
 	if provider.DefaultModel != "" {
 		defaultModelID := provider.ProviderType + "/" + provider.DefaultModel
 		found := false
-		for _, m := range models {
+		for _, m := range modelList {
 			if m.ID == defaultModelID {
 				found = true
 				break
 			}
 		}
 		if !found {
-			models = append([]Model{{
+			modelList = append([]Model{{
 				ID:      defaultModelID,
 				Object:  "model",
 				Created: now,
 				OwnedBy: provider.ProviderType,
-			}}, models...)
+			}}, modelList...)
 		}
 	}
 
 	return ModelsResponse{
 		Object: "list",
-		Data:   models,
+		Data:   modelList,
 	}, nil
 }
 

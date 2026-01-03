@@ -11,7 +11,7 @@ type UsageRecord struct {
 	UserID     uint   `gorm:"not null;index" json:"user_id"`
 	ProxyKeyID uint   `gorm:"not null;index" json:"proxy_key_id"`
 	ProviderID uint   `gorm:"not null;index" json:"provider_id"`
-	Model      string `gorm:"type:varchar(100);index" json:"model"`
+	ModelName  string `gorm:"column:model;type:varchar(100);index" json:"model"`
 
 	InputTokens  int `gorm:"default:0" json:"input_tokens"`
 	OutputTokens int `gorm:"default:0" json:"output_tokens"`
