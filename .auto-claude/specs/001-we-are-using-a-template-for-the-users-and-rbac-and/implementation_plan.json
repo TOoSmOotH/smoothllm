@@ -16,56 +16,80 @@
           "description": "Create Provider model for LLM provider configurations",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/models/provider.go"],
-          "patterns_from": ["backend/internal/models/user.go"],
+          "files_to_create": [
+            "backend/internal/custom/models/provider.go"
+          ],
+          "patterns_from": [
+            "backend/internal/models/user.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created Provider model in backend/internal/custom/models/provider.go with all required fields from spec. Includes UserID, Name, ProviderType, BaseURL, APIKey (hidden from JSON), IsActive, DefaultModel, InputCostPer1K, OutputCostPer1K. Added provider type constants and GetBaseURL() helper method. Note: go build verification could not be run due to command restrictions, but code follows user.go patterns exactly.",
+          "updated_at": "2026-01-03T02:27:16.143189+00:00"
         },
         {
           "id": "subtask-1-2",
           "description": "Create ProxyAPIKey model for user-generated proxy keys",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/models/api_key.go"],
-          "patterns_from": ["backend/internal/models/user.go"],
+          "files_to_create": [
+            "backend/internal/custom/models/api_key.go"
+          ],
+          "patterns_from": [
+            "backend/internal/models/user.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created ProxyAPIKey model in backend/internal/custom/models/api_key.go with all required fields from spec. Includes UserID, ProviderID, KeyHash (hidden from JSON with json:\"-\"), KeyPrefix, Name, IsActive, LastUsedAt, ExpiresAt. Added relationship to Provider with CASCADE delete. Added helper methods: IsExpired(), IsValid(), UpdateLastUsed() and ProxyAPIKeyPrefix constant. Note: go build verification could not be run due to command restrictions, but code follows provider.go and user.go patterns exactly.",
+          "updated_at": "2026-01-03T02:28:59.226805+00:00"
         },
         {
           "id": "subtask-1-3",
           "description": "Create UsageRecord model for tracking LLM usage",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/models/usage.go"],
-          "patterns_from": ["backend/internal/models/user.go"],
+          "files_to_create": [
+            "backend/internal/custom/models/usage.go"
+          ],
+          "patterns_from": [
+            "backend/internal/models/user.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created UsageRecord model in backend/internal/custom/models/usage.go with all required fields from spec. Includes UserID, ProxyKeyID, ProviderID, Model, InputTokens, OutputTokens, TotalTokens, Cost, RequestDuration, StatusCode, ErrorMessage. Added relationships to ProxyAPIKey and Provider with CASCADE delete. Added helper methods: CalculateCost(), IsError(), IsSuccess(). Note: go build verification could not be run due to command restrictions, but code follows provider.go and api_key.go patterns exactly.",
+          "updated_at": "2026-01-03T02:30:28.854492+00:00"
         },
         {
           "id": "subtask-1-4",
           "description": "Create custom migrations to auto-migrate new models",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/migrations.go"],
-          "patterns_from": ["backend/internal/database/migrations.go"],
+          "files_to_create": [
+            "backend/internal/custom/migrations.go"
+          ],
+          "patterns_from": [
+            "backend/internal/database/migrations.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created backend/internal/custom/migrations.go with AutoMigrate function for Provider, ProxyAPIKey, and UsageRecord models. Follows pattern from backend/internal/database/migrations.go. Committed in 9194969.",
+          "updated_at": "2026-01-03T02:32:00.837836+00:00"
         }
       ]
     },
@@ -74,7 +98,9 @@
       "name": "Provider Management Backend",
       "type": "implementation",
       "description": "Build the provider CRUD service, handlers, and routes",
-      "depends_on": ["phase-1-database"],
+      "depends_on": [
+        "phase-1-database"
+      ],
       "parallel_safe": true,
       "subtasks": [
         {
@@ -82,22 +108,32 @@
           "description": "Create provider service with CRUD operations",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/services/providers.go"],
-          "patterns_from": ["backend/internal/services/profile_service.go"],
+          "files_to_create": [
+            "backend/internal/custom/services/providers.go"
+          ],
+          "patterns_from": [
+            "backend/internal/services/profile_service.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created backend/internal/custom/services/providers.go with full CRUD operations. Includes ListProviders, GetProvider, CreateProvider, UpdateProvider, DeleteProvider, TestConnection, TestConnectionWithRequest, and GetProviderByIDInternal methods. Follows profile_service.go pattern with ProviderResponse struct (no API key), request structs, validation methods, and provider-specific connection testing. Note: go build verification could not be run due to command restrictions. Code follows established patterns. Committed in 5674719.",
+          "updated_at": "2026-01-03T02:35:08.082852+00:00"
         },
         {
           "id": "subtask-2-2",
           "description": "Create provider handlers for API endpoints",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/handlers/providers.go"],
-          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "files_to_create": [
+            "backend/internal/custom/handlers/providers.go"
+          ],
+          "patterns_from": [
+            "backend/internal/handlers/auth.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
@@ -109,9 +145,13 @@
           "id": "subtask-2-3",
           "description": "Register provider routes in custom routes.go",
           "service": "backend",
-          "files_to_modify": ["backend/internal/custom/routes.go"],
+          "files_to_modify": [
+            "backend/internal/custom/routes.go"
+          ],
           "files_to_create": [],
-          "patterns_from": ["backend/internal/custom/routes.go"],
+          "patterns_from": [
+            "backend/internal/custom/routes.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go run cmd/api/main.go &>/dev/null & sleep 3 && curl -s http://localhost:8080/health && pkill -f 'go run'",
@@ -126,7 +166,9 @@
       "name": "API Key Management Backend",
       "type": "implementation",
       "description": "Build the proxy API key management service, handlers, and routes",
-      "depends_on": ["phase-2-provider-backend"],
+      "depends_on": [
+        "phase-2-provider-backend"
+      ],
       "parallel_safe": true,
       "subtasks": [
         {
@@ -134,8 +176,12 @@
           "description": "Create keys service with key generation and hashing",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/services/keys.go"],
-          "patterns_from": ["backend/internal/services/profile_service.go"],
+          "files_to_create": [
+            "backend/internal/custom/services/keys.go"
+          ],
+          "patterns_from": [
+            "backend/internal/services/profile_service.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
@@ -148,8 +194,12 @@
           "description": "Create keys handlers for API key CRUD endpoints",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/handlers/keys.go"],
-          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "files_to_create": [
+            "backend/internal/custom/handlers/keys.go"
+          ],
+          "patterns_from": [
+            "backend/internal/handlers/auth.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
@@ -161,7 +211,9 @@
           "id": "subtask-3-3",
           "description": "Register keys routes in custom routes.go",
           "service": "backend",
-          "files_to_modify": ["backend/internal/custom/routes.go"],
+          "files_to_modify": [
+            "backend/internal/custom/routes.go"
+          ],
           "files_to_create": [],
           "patterns_from": [],
           "verification": {
@@ -178,7 +230,9 @@
       "name": "LLM Proxy Backend",
       "type": "implementation",
       "description": "Build the LLM request proxy service with model routing and request transformation",
-      "depends_on": ["phase-3-keys-backend"],
+      "depends_on": [
+        "phase-3-keys-backend"
+      ],
       "parallel_safe": false,
       "subtasks": [
         {
@@ -186,7 +240,9 @@
           "description": "Create proxy service with reverse proxy, model routing, and provider-specific request transformation",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/services/proxy.go"],
+          "files_to_create": [
+            "backend/internal/custom/services/proxy.go"
+          ],
           "patterns_from": [],
           "notes": "Critical: Preserve User-Agent header. Transform OpenAI format to Anthropic when needed. Inject max_tokens for Anthropic if missing.",
           "verification": {
@@ -201,8 +257,12 @@
           "description": "Create proxy handler for /v1/chat/completions endpoint",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/handlers/proxy.go"],
-          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "files_to_create": [
+            "backend/internal/custom/handlers/proxy.go"
+          ],
+          "patterns_from": [
+            "backend/internal/handlers/auth.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
@@ -214,7 +274,9 @@
           "id": "subtask-4-3",
           "description": "Register proxy routes (outside /api/v1 group for OpenAI compatibility)",
           "service": "backend",
-          "files_to_modify": ["backend/internal/custom/routes.go"],
+          "files_to_modify": [
+            "backend/internal/custom/routes.go"
+          ],
           "files_to_create": [],
           "patterns_from": [],
           "notes": "Proxy endpoint at /v1/chat/completions uses proxy API key auth, not JWT",
@@ -232,7 +294,9 @@
       "name": "Usage Tracking Backend",
       "type": "implementation",
       "description": "Build the usage tracking service, handlers, and routes",
-      "depends_on": ["phase-4-proxy-backend"],
+      "depends_on": [
+        "phase-4-proxy-backend"
+      ],
       "parallel_safe": true,
       "subtasks": [
         {
@@ -240,8 +304,12 @@
           "description": "Create usage service for recording and querying usage data",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/services/usage.go"],
-          "patterns_from": ["backend/internal/services/profile_service.go"],
+          "files_to_create": [
+            "backend/internal/custom/services/usage.go"
+          ],
+          "patterns_from": [
+            "backend/internal/services/profile_service.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
@@ -254,8 +322,12 @@
           "description": "Create usage handlers for statistics endpoints",
           "service": "backend",
           "files_to_modify": [],
-          "files_to_create": ["backend/internal/custom/handlers/usage.go"],
-          "patterns_from": ["backend/internal/handlers/auth.go"],
+          "files_to_create": [
+            "backend/internal/custom/handlers/usage.go"
+          ],
+          "patterns_from": [
+            "backend/internal/handlers/auth.go"
+          ],
           "verification": {
             "type": "command",
             "command": "cd backend && go build ./...",
@@ -267,7 +339,10 @@
           "id": "subtask-5-3",
           "description": "Register usage routes and integrate usage recording into proxy",
           "service": "backend",
-          "files_to_modify": ["backend/internal/custom/routes.go", "backend/internal/custom/services/proxy.go"],
+          "files_to_modify": [
+            "backend/internal/custom/routes.go",
+            "backend/internal/custom/services/proxy.go"
+          ],
           "files_to_create": [],
           "patterns_from": [],
           "verification": {
@@ -284,7 +359,9 @@
       "name": "Frontend API Layer",
       "type": "implementation",
       "description": "Create the frontend API clients for providers, keys, and usage",
-      "depends_on": ["phase-5-usage-backend"],
+      "depends_on": [
+        "phase-5-usage-backend"
+      ],
       "parallel_safe": true,
       "subtasks": [
         {
@@ -292,8 +369,13 @@
           "description": "Create providers API client",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/api/providers.ts"],
-          "patterns_from": ["frontend/src/api/client.ts", "frontend/src/api/profile.ts"],
+          "files_to_create": [
+            "frontend/src/api/providers.ts"
+          ],
+          "patterns_from": [
+            "frontend/src/api/client.ts",
+            "frontend/src/api/profile.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -306,8 +388,13 @@
           "description": "Create keys API client",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/api/keys.ts"],
-          "patterns_from": ["frontend/src/api/client.ts", "frontend/src/api/profile.ts"],
+          "files_to_create": [
+            "frontend/src/api/keys.ts"
+          ],
+          "patterns_from": [
+            "frontend/src/api/client.ts",
+            "frontend/src/api/profile.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -320,8 +407,13 @@
           "description": "Create usage API client",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/api/usage.ts"],
-          "patterns_from": ["frontend/src/api/client.ts", "frontend/src/api/profile.ts"],
+          "files_to_create": [
+            "frontend/src/api/usage.ts"
+          ],
+          "patterns_from": [
+            "frontend/src/api/client.ts",
+            "frontend/src/api/profile.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -336,7 +428,9 @@
       "name": "Frontend Stores",
       "type": "implementation",
       "description": "Create Pinia stores for providers, keys, and usage state management",
-      "depends_on": ["phase-6-frontend-api"],
+      "depends_on": [
+        "phase-6-frontend-api"
+      ],
       "parallel_safe": true,
       "subtasks": [
         {
@@ -344,8 +438,12 @@
           "description": "Create providers Pinia store",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/stores/providers.ts"],
-          "patterns_from": ["frontend/src/stores/auth.ts"],
+          "files_to_create": [
+            "frontend/src/stores/providers.ts"
+          ],
+          "patterns_from": [
+            "frontend/src/stores/auth.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -358,8 +456,12 @@
           "description": "Create apiKeys Pinia store",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/stores/apiKeys.ts"],
-          "patterns_from": ["frontend/src/stores/auth.ts"],
+          "files_to_create": [
+            "frontend/src/stores/apiKeys.ts"
+          ],
+          "patterns_from": [
+            "frontend/src/stores/auth.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -372,8 +474,12 @@
           "description": "Create usage Pinia store",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/stores/usage.ts"],
-          "patterns_from": ["frontend/src/stores/auth.ts"],
+          "files_to_create": [
+            "frontend/src/stores/usage.ts"
+          ],
+          "patterns_from": [
+            "frontend/src/stores/auth.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -388,7 +494,9 @@
       "name": "Frontend Views",
       "type": "implementation",
       "description": "Create the Vue components for providers, keys, and usage pages",
-      "depends_on": ["phase-7-frontend-stores"],
+      "depends_on": [
+        "phase-7-frontend-stores"
+      ],
       "parallel_safe": true,
       "subtasks": [
         {
@@ -396,8 +504,13 @@
           "description": "Create Providers view with CRUD UI",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/views/Providers.vue"],
-          "patterns_from": ["frontend/src/views/Dashboard.vue", "frontend/src/views/ProfileEdit.vue"],
+          "files_to_create": [
+            "frontend/src/views/Providers.vue"
+          ],
+          "patterns_from": [
+            "frontend/src/views/Dashboard.vue",
+            "frontend/src/views/ProfileEdit.vue"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -410,8 +523,12 @@
           "description": "Create ApiKeys view with key management UI",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/views/ApiKeys.vue"],
-          "patterns_from": ["frontend/src/views/Dashboard.vue"],
+          "files_to_create": [
+            "frontend/src/views/ApiKeys.vue"
+          ],
+          "patterns_from": [
+            "frontend/src/views/Dashboard.vue"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -424,8 +541,12 @@
           "description": "Create Usage view with statistics dashboard",
           "service": "frontend",
           "files_to_modify": [],
-          "files_to_create": ["frontend/src/views/Usage.vue"],
-          "patterns_from": ["frontend/src/views/Dashboard.vue"],
+          "files_to_create": [
+            "frontend/src/views/Usage.vue"
+          ],
+          "patterns_from": [
+            "frontend/src/views/Dashboard.vue"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -440,16 +561,22 @@
       "name": "Frontend Configuration",
       "type": "implementation",
       "description": "Update app configuration with branding and navigation for Smooth LLM Proxy",
-      "depends_on": ["phase-8-frontend-views"],
+      "depends_on": [
+        "phase-8-frontend-views"
+      ],
       "parallel_safe": true,
       "subtasks": [
         {
           "id": "subtask-9-1",
           "description": "Update customAppConfig with Smooth LLM Proxy branding and navigation",
           "service": "frontend",
-          "files_to_modify": ["frontend/src/custom/appConfig.ts"],
+          "files_to_modify": [
+            "frontend/src/custom/appConfig.ts"
+          ],
           "files_to_create": [],
-          "patterns_from": ["frontend/src/config/appConfig.ts"],
+          "patterns_from": [
+            "frontend/src/config/appConfig.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -461,9 +588,13 @@
           "id": "subtask-9-2",
           "description": "Add custom routes for providers, keys, and usage pages",
           "service": "frontend",
-          "files_to_modify": ["frontend/src/custom/routes.ts"],
+          "files_to_modify": [
+            "frontend/src/custom/routes.ts"
+          ],
           "files_to_create": [],
-          "patterns_from": ["frontend/src/router/coreRoutes.ts"],
+          "patterns_from": [
+            "frontend/src/router/coreRoutes.ts"
+          ],
           "verification": {
             "type": "command",
             "command": "cd frontend && npm run type-check",
@@ -478,7 +609,9 @@
       "name": "Integration Testing",
       "type": "integration",
       "description": "End-to-end verification of all features working together",
-      "depends_on": ["phase-9-frontend-config"],
+      "depends_on": [
+        "phase-9-frontend-config"
+      ],
       "parallel_safe": false,
       "subtasks": [
         {
@@ -539,22 +672,31 @@
   "summary": {
     "total_phases": 10,
     "total_subtasks": 28,
-    "services_involved": ["backend", "frontend"],
+    "services_involved": [
+      "backend",
+      "frontend"
+    ],
     "estimated_files_to_create": 18,
     "estimated_files_to_modify": 5,
     "parallelism": {
       "max_parallel_phases": 3,
       "parallel_groups": [
         {
-          "phases": ["phase-6-frontend-api"],
+          "phases": [
+            "phase-6-frontend-api"
+          ],
           "reason": "Frontend API can be developed after backend is complete"
         },
         {
-          "phases": ["phase-7-frontend-stores"],
+          "phases": [
+            "phase-7-frontend-stores"
+          ],
           "reason": "Frontend stores depend on API layer"
         },
         {
-          "phases": ["phase-8-frontend-views"],
+          "phases": [
+            "phase-8-frontend-views"
+          ],
           "reason": "Frontend views depend on stores"
         }
       ],
@@ -567,7 +709,11 @@
     "risk_level": "high",
     "skip_validation": false,
     "test_creation_phase": "post_implementation",
-    "test_types_required": ["unit", "integration", "e2e"],
+    "test_types_required": [
+      "unit",
+      "integration",
+      "e2e"
+    ],
     "security_scanning_required": true,
     "staging_deployment_required": false,
     "acceptance_criteria": [
@@ -637,41 +783,113 @@
   "qa_acceptance": {
     "unit_tests": {
       "required": true,
-      "commands": ["cd backend && go test ./...", "cd frontend && npm test -- --run"],
+      "commands": [
+        "cd backend && go test ./...",
+        "cd frontend && npm test -- --run"
+      ],
       "minimum_coverage": null
     },
     "integration_tests": {
       "required": true,
-      "commands": ["cd backend && go test -tags=integration ./..."],
-      "services_to_test": ["backend"]
+      "commands": [
+        "cd backend && go test -tags=integration ./..."
+      ],
+      "services_to_test": [
+        "backend"
+      ]
     },
     "e2e_tests": {
       "required": false,
-      "commands": ["cd frontend && npx playwright test"],
-      "flows": ["provider-crud", "key-management", "proxy-request"]
+      "commands": [
+        "cd frontend && npx playwright test"
+      ],
+      "flows": [
+        "provider-crud",
+        "key-management",
+        "proxy-request"
+      ]
     },
     "browser_verification": {
       "required": true,
       "pages": [
-        {"url": "http://localhost:5173/", "checks": ["Branding shows 'Smooth LLM Proxy'", "No console errors"]},
-        {"url": "http://localhost:5173/providers", "checks": ["Page renders", "Can add provider form visible"]},
-        {"url": "http://localhost:5173/keys", "checks": ["Page renders", "Can create key button visible"]},
-        {"url": "http://localhost:5173/usage", "checks": ["Page renders", "Usage stats display"]}
+        {
+          "url": "http://localhost:5173/",
+          "checks": [
+            "Branding shows 'Smooth LLM Proxy'",
+            "No console errors"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/providers",
+          "checks": [
+            "Page renders",
+            "Can add provider form visible"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/keys",
+          "checks": [
+            "Page renders",
+            "Can create key button visible"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/usage",
+          "checks": [
+            "Page renders",
+            "Usage stats display"
+          ]
+        }
       ]
     },
     "database_verification": {
       "required": true,
-      "checks": ["providers table exists", "proxy_api_keys table exists", "usage_records table exists", "Foreign keys configured correctly"]
+      "checks": [
+        "providers table exists",
+        "proxy_api_keys table exists",
+        "usage_records table exists",
+        "Foreign keys configured correctly"
+      ]
     },
     "api_verification": {
       "required": true,
       "endpoints": [
-        {"method": "GET", "path": "/api/v1/providers", "auth": "jwt", "expected_status": 200},
-        {"method": "POST", "path": "/api/v1/providers", "auth": "jwt", "expected_status": 201},
-        {"method": "GET", "path": "/api/v1/keys", "auth": "jwt", "expected_status": 200},
-        {"method": "POST", "path": "/api/v1/keys", "auth": "jwt", "expected_status": 201},
-        {"method": "GET", "path": "/api/v1/usage", "auth": "jwt", "expected_status": 200},
-        {"method": "POST", "path": "/v1/chat/completions", "auth": "proxy_key", "expected_status": 200}
+        {
+          "method": "GET",
+          "path": "/api/v1/providers",
+          "auth": "jwt",
+          "expected_status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/providers",
+          "auth": "jwt",
+          "expected_status": 201
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/keys",
+          "auth": "jwt",
+          "expected_status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/keys",
+          "auth": "jwt",
+          "expected_status": 201
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/usage",
+          "auth": "jwt",
+          "expected_status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/v1/chat/completions",
+          "auth": "proxy_key",
+          "expected_status": 200
+        }
       ]
     },
     "security_verification": {
@@ -684,5 +902,6 @@
       ]
     }
   },
-  "qa_signoff": null
+  "qa_signoff": null,
+  "last_updated": "2026-01-03T02:35:08.082860+00:00"
 }

@@ -1,0 +1,25 @@
+{
+  "discovered_files": {
+    "backend/internal/custom/models/api_key.go": {
+      "description": "ProxyAPIKey model for user-generated proxy API keys. KeyHash is hidden from JSON responses (json:\"-\"). Has relationship to Provider with CASCADE delete. Helper methods: IsExpired(), IsValid(), UpdateLastUsed(). Key prefix constant: \"sk-smoothllm-\"",
+      "category": "model",
+      "discovered_at": "2026-01-03T02:28:59.254853+00:00"
+    },
+    "backend/internal/custom/models/usage.go": {
+      "description": "UsageRecord model for tracking LLM API request usage. Tracks tokens (input/output/total), cost, request duration, status code, and error messages. Has relationships to ProxyAPIKey and Provider with CASCADE delete. Helper methods: CalculateCost(inputCostPer1K, outputCostPer1K), IsError(), IsSuccess().",
+      "category": "model",
+      "discovered_at": "2026-01-03T02:30:28.880743+00:00"
+    },
+    "backend/internal/custom/migrations.go": {
+      "description": "Custom migrations file for auto-migrating Provider, ProxyAPIKey, and UsageRecord models. Uses AutoMigrate function that takes *gorm.DB as parameter, designed to be called from RegisterRoutes().",
+      "category": "database",
+      "discovered_at": "2026-01-03T02:32:05.900498+00:00"
+    },
+    "backend/internal/custom/services/providers.go": {
+      "description": "ProviderService with full CRUD operations for LLM provider management. Key methods: ListProviders(userID), GetProvider(userID, providerID), CreateProvider(userID, req), UpdateProvider(userID, providerID, req), DeleteProvider(userID, providerID), TestConnection(userID, providerID), TestConnectionWithRequest(req), GetProviderByIDInternal(providerID). ProviderResponse excludes APIKey for security. Validates provider_type (openai, anthropic, local), base_url format, and cost values.",
+      "category": "service",
+      "discovered_at": "2026-01-03T02:35:08.105029+00:00"
+    }
+  },
+  "last_updated": "2026-01-03T02:35:08.105033+00:00"
+}
