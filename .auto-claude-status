@@ -3,13 +3,13 @@
   "spec": "001-we-are-using-a-template-for-the-users-and-rbac-and",
   "state": "building",
   "subtasks": {
-    "completed": 19,
+    "completed": 23,
     "total": 30,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Frontend Stores",
+    "current": "Frontend Views",
     "id": null,
     "total": 3
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 20,
+    "number": 24,
     "started_at": "2026-01-02T21:25:19.861774"
   },
-  "last_update": "2026-01-02T22:05:32.466962"
+  "last_update": "2026-01-02T22:14:36.586928"
 }

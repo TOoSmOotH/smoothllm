@@ -49,7 +49,17 @@
       "description": "Usage API client for frontend. TypeScript interfaces: UsageQueryParams (filtering), UsageSummaryResponse (overall stats), DailyUsageResponse (daily breakdown), UsageByKeyResponse (per-key stats), UsageByProviderResponse (per-provider stats), UsageByModelResponse (per-model stats), UsageRecordResponse (individual records). usageApi object with methods: getUsageSummary, getDailyUsage, getUsageByKey, getUsageByProvider, getUsageByModel, getRecentUsage. Includes buildQueryString helper for constructing URL query parameters from UsageQueryParams.",
       "category": "frontend-api",
       "discovered_at": "2026-01-03T03:05:19.403212+00:00"
+    },
+    "frontend/src/stores/usage.ts": {
+      "description": "Usage Pinia store for managing usage statistics. Follows setup store pattern. Key features: stores multiple usage aggregations (summary, daily, by-key, by-provider, by-model, recent records), useful getters (hasUsageData, totalRequests, totalCost, totalTokens, successRate), lookup getters by ID (getUsageByKeyId, getUsageByProviderId, getUsageByModelName), fetchAllUsageData() for parallel loading all data, refreshUsageData() to reload with cached params, and currentParams state for tracking active filters.",
+      "category": "frontend",
+      "discovered_at": "2026-01-03T03:11:08.930048+00:00"
+    },
+    "frontend/src/views/Providers.vue": {
+      "description": "Providers view with full CRUD UI for LLM provider management. Uses AppLayout, Button, Input components. Implements modal-based create/edit forms with Teleport, delete confirmation, test connection functionality. Form fields: name, provider_type (select), base_url, api_key (password), default_model, input/output costs, is_active checkbox. Follows patterns from Dashboard.vue and ProfileEdit.vue with useProvidersStore integration and vue-sonner toast notifications.",
+      "category": "frontend_view",
+      "discovered_at": "2026-01-03T03:14:18.965895+00:00"
     }
   },
-  "last_updated": "2026-01-03T03:05:19.403220+00:00"
+  "last_updated": "2026-01-03T03:14:18.965902+00:00"
 }
