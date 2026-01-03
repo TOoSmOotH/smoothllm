@@ -5,19 +5,27 @@ import (
 )
 
 func CORS(allowedOrigins []string) gin.HandlerFunc {
+	// Check if wildcard is enabled
+	allowAll := false
+	for _, o := range allowedOrigins {
+		if o == "*" {
+			allowAll = true
+			break
+		}
+	}
+
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		allowed := false
-		for _, allowedOrigin := range allowedOrigins {
-			if origin == allowedOrigin {
-				allowed = true
-				break
-			}
-		}
-
-		if allowed {
+		if allowAll && origin != "" {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			for _, allowedOrigin := range allowedOrigins {
+				if origin == allowedOrigin {
+					c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
 		}
 
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")

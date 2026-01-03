@@ -14,7 +14,7 @@ services:
       - DB_PATH=/app/data/smoothweb.db
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       - JWT_EXPIRATION=${JWT_EXPIRATION:-24h}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Database volume - persists data across container restarts
