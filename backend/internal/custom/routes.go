@@ -1,9 +1,13 @@
 package custom
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/smoothweb/backend/internal/auth"
 	"github.com/smoothweb/backend/internal/config"
+	"github.com/smoothweb/backend/internal/custom/handlers"
+	"github.com/smoothweb/backend/internal/custom/services"
 	"github.com/smoothweb/backend/internal/rbac"
 	"gorm.io/gorm"
 )
@@ -17,6 +21,27 @@ type Dependencies struct {
 
 // RegisterRoutes lets downstream projects add routes without touching core wiring.
 func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
-	_ = v1
-	_ = deps
+	// Run custom migrations
+	if err := AutoMigrate(deps.DB); err != nil {
+		log.Fatalf("Failed to run custom migrations: %v", err)
+	}
+
+	// Initialize services
+	providerService := services.NewProviderService(deps.DB)
+
+	// Initialize handlers
+	providerHandler := handlers.NewProviderHandler(providerService)
+
+	// Provider routes (protected with JWT)
+	providers := v1.Group("/providers")
+	providers.Use(auth.AuthMiddleware(deps.JWT))
+	{
+		providers.GET("", providerHandler.ListProviders)
+		providers.POST("", providerHandler.CreateProvider)
+		providers.POST("/test", providerHandler.TestConnectionWithCredentials)
+		providers.GET("/:id", providerHandler.GetProvider)
+		providers.PUT("/:id", providerHandler.UpdateProvider)
+		providers.DELETE("/:id", providerHandler.DeleteProvider)
+		providers.POST("/:id/test", providerHandler.TestConnection)
+	}
 }
