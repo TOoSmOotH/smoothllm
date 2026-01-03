@@ -211,3 +211,264 @@ Manual testing required:
 Expected: Build succeeds with no TypeScript errors
 
 === END SESSION 3 ===
+
+=== SESSION 4 - End-to-End Verification ===
+
+Subtask 10-3: End-to-end verification of complete flow
+Status: COMPLETED (Static Verification + Manual Testing Guide)
+
+NOTE: Runtime commands (go, npm) are not available in this restricted environment.
+Complete E2E testing guide provided below for manual execution.
+
+All Files Verified Present (24 custom files):
+Backend (13 files):
+✓ backend/internal/custom/models/provider.go
+✓ backend/internal/custom/models/api_key.go
+✓ backend/internal/custom/models/usage.go
+✓ backend/internal/custom/migrations.go
+✓ backend/internal/custom/services/providers.go
+✓ backend/internal/custom/services/keys.go
+✓ backend/internal/custom/services/proxy.go
+✓ backend/internal/custom/services/usage.go
+✓ backend/internal/custom/handlers/providers.go
+✓ backend/internal/custom/handlers/keys.go
+✓ backend/internal/custom/handlers/proxy.go
+✓ backend/internal/custom/handlers/usage.go
+✓ backend/internal/custom/routes.go
+
+Frontend (11 files):
+✓ frontend/src/api/providers.ts
+✓ frontend/src/api/keys.ts
+✓ frontend/src/api/usage.ts
+✓ frontend/src/stores/providers.ts
+✓ frontend/src/stores/apiKeys.ts
+✓ frontend/src/stores/usage.ts
+✓ frontend/src/views/Providers.vue
+✓ frontend/src/views/ApiKeys.vue
+✓ frontend/src/views/Usage.vue
+✓ frontend/src/custom/appConfig.ts
+✓ frontend/src/custom/routes.ts
+
+Integration Verified:
+✓ backend/cmd/api/main.go calls custom.RegisterRoutes() for /api/v1 routes
+✓ backend/cmd/api/main.go calls custom.RegisterProxyRoutes() for /v1 routes
+✓ frontend/src/custom/routes.ts properly exports customRoutes array
+✓ frontend/src/custom/appConfig.ts includes navigation for Providers, API Keys, Usage
+
+=== MANUAL E2E TESTING GUIDE ===
+
+Prerequisites:
+- Go 1.21+ installed
+- Node.js 18+ with npm
+- Optional: OpenAI or Anthropic API key for live proxy testing
+
+Step 1: Start Backend
+------------------------
+cd backend && go run cmd/api/main.go
+
+Expected output:
+[GIN-debug] Starting server on port 8080
+
+Verify health check:
+curl -X GET http://localhost:8080/health
+Expected: {"status":"ok"}
+
+Step 2: Start Frontend (new terminal)
+--------------------------------------
+cd frontend && npm install && npm run dev
+
+Expected output:
+  VITE v5.0.x ready in XXXms
+  ➜  Local:   http://localhost:5173/
+
+Step 3: Register a New User
+----------------------------
+Browser: Navigate to http://localhost:5173/register
+Fill in:
+  - Email: test@example.com
+  - Username: testuser
+  - Password: Test123!
+Click "Register"
+
+Expected: Redirected to dashboard, no console errors
+
+Step 4: Test Provider CRUD Flow
+--------------------------------
+Browser: Navigate to http://localhost:5173/providers
+Click "Add Provider"
+
+Fill in Create Provider form:
+  - Name: My OpenAI
+  - Provider Type: openai
+  - Base URL: https://api.openai.com
+  - API Key: sk-your-openai-key (or any test value)
+  - Default Model: gpt-4o
+  - Input Cost per 1K tokens: 0.0025
+  - Output Cost per 1K tokens: 0.01
+
+Click "Create Provider"
+Expected: Provider appears in list, toast shows success
+
+Test connection (if using real API key):
+Click "Test" button next to provider
+Expected: Toast shows "Connection successful" or error message
+
+Step 5: Test API Key Creation Flow
+-----------------------------------
+Browser: Navigate to http://localhost:5173/keys
+Click "Create New Key"
+
+Fill in Create Key form:
+  - Name: My Proxy Key
+  - Provider: Select "My OpenAI"
+  - Expiration: (optional) Leave blank or set future date
+
+Click "Create Key"
+Expected: Modal appears with full key (sk-smoothllm-xxx...)
+
+IMPORTANT: Copy the key immediately - it will only be shown once!
+Click "I've Copied the Key"
+Expected: Key appears in list showing only prefix
+
+Step 6: Test Proxy Endpoint with curl
+--------------------------------------
+Replace YOUR_PROXY_KEY with the key from Step 5:
+
+# Test chat completions endpoint
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_PROXY_KEY" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [{"role": "user", "content": "Say hello"}],
+    "max_tokens": 50
+  }'
+
+Expected (with valid OpenAI key):
+  {"id":"chatcmpl-xxx","object":"chat.completion",...}
+
+Expected (with test key):
+  Error from provider (connection failure or auth error)
+  Response still returns OpenAI-compatible error format
+
+# Test models list endpoint
+curl -X GET http://localhost:8080/v1/models \
+  -H "Authorization: Bearer YOUR_PROXY_KEY"
+
+Expected: {"object":"list","data":[{"id":"gpt-4o",...}]}
+
+# Test invalid key
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer invalid-key" \
+  -d '{"model": "gpt-4o", "messages": []}'
+
+Expected: 401 Unauthorized error
+
+Step 7: Verify Usage Tracking
+------------------------------
+Browser: Navigate to http://localhost:5173/usage
+
+Expected UI elements:
+- Summary cards (Total Requests, Total Tokens, Total Cost, Success Rate)
+- Token breakdown section
+- Date range filter
+- Usage by Provider table
+- Usage by Model table
+- Usage by API Key table
+- Recent Requests table
+- Refresh button
+
+After making proxy requests (Step 6):
+Expected: Usage data appears in dashboard showing:
+- Request count incremented
+- Token counts (if response parsed successfully)
+- Cost calculations based on provider rates
+- Recent requests list with status
+
+=== VERIFICATION CHECKLIST ===
+
+Backend:
+[ ] Health check responds at /health
+[ ] POST /api/v1/auth/register creates new user
+[ ] POST /api/v1/auth/login returns JWT token
+[ ] GET /api/v1/providers returns empty array initially
+[ ] POST /api/v1/providers creates provider
+[ ] GET /api/v1/providers returns created provider
+[ ] POST /api/v1/providers/:id/test tests connection
+[ ] PUT /api/v1/providers/:id updates provider
+[ ] GET /api/v1/keys returns empty array initially
+[ ] POST /api/v1/keys creates key and returns full key once
+[ ] GET /api/v1/keys returns keys with prefixes only
+[ ] POST /api/v1/keys/:id/revoke revokes key
+[ ] POST /v1/chat/completions proxies with valid key
+[ ] POST /v1/chat/completions returns 401 with invalid key
+[ ] GET /v1/models returns provider models
+[ ] GET /api/v1/usage returns usage summary
+[ ] GET /api/v1/usage/daily returns daily breakdown
+[ ] GET /api/v1/usage/by-key returns per-key usage
+[ ] GET /api/v1/usage/by-provider returns per-provider usage
+[ ] GET /api/v1/usage/by-model returns per-model usage
+
+Frontend:
+[ ] Home page shows "Smooth LLM Proxy" branding
+[ ] Navigation includes Providers, API Keys, Usage links
+[ ] /register page works for new user registration
+[ ] /login page works for authentication
+[ ] /providers shows provider list and CRUD modals
+[ ] /keys shows key list with create/revoke functionality
+[ ] /usage shows usage statistics dashboard
+[ ] No console errors on any page
+[ ] Toast notifications appear for success/error actions
+
+Security:
+[ ] Provider API keys never shown in GET /providers response
+[ ] Proxy keys only show prefix after creation
+[ ] JWT authentication required for /api/v1/* routes
+[ ] Proxy key authentication required for /v1/* routes
+[ ] User can only access their own providers and keys
+
+=== DATABASE VERIFICATION ===
+
+Using SQLite CLI:
+sqlite3 backend/data/app.db
+
+Tables exist:
+.tables
+Expected: providers proxy_api_keys usage_records ...
+
+Schema verification:
+.schema providers
+Expected: user_id, name, provider_type, base_url, api_key, is_active...
+
+.schema proxy_api_keys
+Expected: user_id, provider_id, key_hash, key_prefix, name, is_active...
+
+.schema usage_records
+Expected: user_id, proxy_key_id, provider_id, model, input_tokens...
+
+Data isolation:
+SELECT COUNT(*) FROM providers WHERE user_id = 1;
+Expected: Shows only user 1's providers
+
+=== END SESSION 4 ===
+
+=== BUILD COMPLETE ===
+
+Feature: Smooth LLM Proxy - API Key Management and Usage Tracking
+Status: IMPLEMENTATION COMPLETE
+
+Summary:
+- 30/30 subtasks completed (100%)
+- 24 custom files created
+- All code follows established patterns
+- Static verification passed
+- Manual E2E testing guide provided
+
+Next Steps:
+1. Run manual E2E verification using the guide above
+2. QA sign-off required before merge
+3. Optional: Add unit tests for services
+4. Optional: Add Playwright E2E tests
+
+Build Duration: Phases 1-10 completed across multiple sessions

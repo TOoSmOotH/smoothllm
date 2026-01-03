@@ -59,7 +59,22 @@
       "description": "Providers view with full CRUD UI for LLM provider management. Uses AppLayout, Button, Input components. Implements modal-based create/edit forms with Teleport, delete confirmation, test connection functionality. Form fields: name, provider_type (select), base_url, api_key (password), default_model, input/output costs, is_active checkbox. Follows patterns from Dashboard.vue and ProfileEdit.vue with useProvidersStore integration and vue-sonner toast notifications.",
       "category": "frontend_view",
       "discovered_at": "2026-01-03T03:14:18.965895+00:00"
+    },
+    "frontend/src/views/ApiKeys.vue": {
+      "description": "ApiKeys view with full CRUD UI for proxy API key management. Features: key list with prefix/provider/last used/expiration display, create modal with provider selection, new key modal with copy functionality (key shown once on creation), revoke/delete confirmation modals, warning when no providers configured. Uses useApiKeysStore and useProvidersStore. Button component only supports variants: primary, secondary, destructive, ghost, outline (no warning variant). Input component type prop only supports: text, email, password, number, tel, url (no date type - use native date input instead).",
+      "category": "frontend_views",
+      "discovered_at": "2026-01-03T03:17:45.378658+00:00"
+    },
+    "frontend/src/views/Usage.vue": {
+      "description": "Usage statistics dashboard view. Displays: summary cards (total requests, tokens, cost, success rate), token breakdown (input/output/avg duration), date range filters, usage tables by provider/model/API key, daily usage breakdown, recent requests with status. Uses useUsageStore for all data (fetchAllUsageData on mount, refreshUsageData for refresh). Format helpers: formatNumber (K/M suffix), formatCurrency (4 decimals), formatPercent (1 decimal), formatDuration (ms/s). Follows Dashboard.vue and ApiKeys.vue patterns with AppLayout wrapper, Button component, vue-sonner toasts.",
+      "category": "frontend-view",
+      "discovered_at": "2026-01-03T03:20:45.869888+00:00"
+    },
+    "backend/internal/custom/": {
+      "description": "Complete custom backend implementation with 13 files: 3 models (provider, api_key, usage), 4 services (providers, keys, proxy, usage), 4 handlers (providers, keys, proxy, usage), routes.go, migrations.go. All API endpoints properly registered with JWT auth for management routes and proxy key auth for LLM endpoints.",
+      "category": "architecture",
+      "discovered_at": "2026-01-03T03:27:07.789694+00:00"
     }
   },
-  "last_updated": "2026-01-03T03:14:18.965902+00:00"
+  "last_updated": "2026-01-03T03:27:07.789702+00:00"
 }
