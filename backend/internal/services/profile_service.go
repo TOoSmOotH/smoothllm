@@ -224,7 +224,7 @@ func (s *ProfileService) UpdateProfile(userID uint, req *UpdateProfileRequest) (
 		updates["industry"] = req.Industry
 	}
 	if req.LinkedInURL != nil {
-		updates["linkedin_url"] = req.LinkedInURL
+		updates["linked_in_url"] = req.LinkedInURL
 	}
 	if req.PortfolioURL != nil {
 		updates["portfolio_url"] = req.PortfolioURL
