@@ -1,7 +1,16 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios'
 
-// API base URL - change this to match your backend
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080/api/v1'
+// API base URL - auto-detect from current hostname if not explicitly set
+const getApiBaseUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL
+  if (envUrl) return envUrl
+
+  // Auto-detect: use same hostname as browser, port 8080
+  const { protocol, hostname } = window.location
+  return `${protocol}//${hostname}:8080/api/v1`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({

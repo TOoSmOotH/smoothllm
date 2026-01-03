@@ -1,10 +1,17 @@
 import axios from 'axios'
 
-const rawBaseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080'
-const normalizedBaseUrl = rawBaseUrl.replace(/\/+$/, '')
-const apiBase =
-  normalizedBaseUrl.endsWith('/api/v1') ? normalizedBaseUrl : `${normalizedBaseUrl}/api/v1`
-const API_BASE_URL = `${apiBase}/admin`
+// Auto-detect API URL from current hostname if not explicitly set
+const getBaseUrl = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL
+  if (envUrl) {
+    const normalized = envUrl.replace(/\/+$/, '')
+    return normalized.endsWith('/api/v1') ? normalized : `${normalized}/api/v1`
+  }
+  const { protocol, hostname } = window.location
+  return `${protocol}//${hostname}:8080/api/v1`
+}
+
+const API_BASE_URL = `${getBaseUrl()}/admin`
 
 export interface Statistics {
   total_users: number

@@ -183,7 +183,13 @@ const profile = ref<ProfileResponse | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-const apiBase = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080/api/v1'
+const getApiBase = (): string => {
+  const envUrl = (import.meta as any).env?.VITE_API_URL
+  if (envUrl) return envUrl
+  const { protocol, hostname } = window.location
+  return `${protocol}//${hostname}:8080/api/v1`
+}
+const apiBase = getApiBase()
 
 const getMediaUrl = (media?: MediaFile | null) => {
   if (!media?.id) return ''
