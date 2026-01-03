@@ -19,7 +19,17 @@
       "description": "ProviderService with full CRUD operations for LLM provider management. Key methods: ListProviders(userID), GetProvider(userID, providerID), CreateProvider(userID, req), UpdateProvider(userID, providerID, req), DeleteProvider(userID, providerID), TestConnection(userID, providerID), TestConnectionWithRequest(req), GetProviderByIDInternal(providerID). ProviderResponse excludes APIKey for security. Validates provider_type (openai, anthropic, local), base_url format, and cost values.",
       "category": "service",
       "discovered_at": "2026-01-03T02:35:08.105029+00:00"
+    },
+    "backend/internal/custom/handlers/providers.go": {
+      "description": "ProviderHandler for provider API endpoints. Uses NewProviderHandler(providerService) constructor. Implements ListProviders, GetProvider, CreateProvider, UpdateProvider, DeleteProvider, TestConnection, TestConnectionWithCredentials. Uses auth.GetUserID(c) for user authentication and strconv.ParseUint for ID parsing from URL params.",
+      "category": "handlers",
+      "discovered_at": "2026-01-03T02:37:00.324184+00:00"
+    },
+    "backend/internal/custom/handlers/keys.go": {
+      "description": "KeyHandler for proxy API key management endpoints. Uses NewKeyHandler(keyService) constructor. Implements ListKeys, GetKey, CreateKey, UpdateKey, DeleteKey, RevokeKey. Uses auth.GetUserID(c) for user authentication and strconv.ParseUint for ID parsing from URL params. CreateKey returns full key once in response (KeyCreateResponse), subsequent GetKey calls only return key prefix for security.",
+      "category": "handler",
+      "discovered_at": "2026-01-03T02:43:42.947893+00:00"
     }
   },
-  "last_updated": "2026-01-03T02:35:08.105033+00:00"
+  "last_updated": "2026-01-03T02:43:42.947898+00:00"
 }

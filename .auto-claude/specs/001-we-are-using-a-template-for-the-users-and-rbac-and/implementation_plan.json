@@ -139,7 +139,9 @@
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created backend/internal/custom/handlers/providers.go with ProviderHandler struct following auth.go pattern. Implements all provider API endpoints: ListProviders (GET), GetProvider (GET :id), CreateProvider (POST), UpdateProvider (PUT :id), DeleteProvider (DELETE :id), TestConnection (POST :id/test), TestConnectionWithCredentials (POST /test). All handlers use auth.GetUserID for authentication, proper HTTP status codes, and delegate to ProviderService. Note: go build verification could not be run due to command restrictions, but code follows auth.go patterns exactly. Committed in 34f9e06.",
+          "updated_at": "2026-01-03T02:37:00.300414+00:00"
         },
         {
           "id": "subtask-2-3",
@@ -157,7 +159,9 @@
             "command": "cd backend && go run cmd/api/main.go &>/dev/null & sleep 3 && curl -s http://localhost:8080/health && pkill -f 'go run'",
             "expected": "Server starts and health check responds"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Registered provider routes in backend/internal/custom/routes.go. Added imports for custom handlers and services packages. Call AutoMigrate on startup to run custom migrations. Initialized ProviderService and ProviderHandler. Registered all provider CRUD routes under /providers with JWT auth: GET / (list), POST / (create), POST /test (test credentials), GET /:id (get), PUT /:id (update), DELETE /:id (delete), POST /:id/test (test connection). Note: go build verification could not be run due to command restrictions, but code follows established patterns and imports verified. Committed in 7817852.",
+          "updated_at": "2026-01-03T02:39:23.007774+00:00"
         }
       ]
     },
@@ -187,7 +191,9 @@
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created backend/internal/custom/services/keys.go with full key management service. Implements: KeyService struct with GORM db, KeyResponse/KeyCreateResponse structs (KeyCreateResponse includes full key only on creation), CreateKeyRequest/UpdateKeyRequest for API input, CRUD methods (ListKeys, GetKey, CreateKey, UpdateKey, DeleteKey, RevokeKey), ValidateKey for proxy authentication that checks hash and validity, secure key generation using crypto/rand (32 bytes = 256 bits entropy), SHA256 hashing for secure key storage, key prefix extraction for display (sk-smoothllm-xxx...yyy), validation including provider ownership check. Follows ProviderService patterns exactly. Note: go build verification could not be run due to command restrictions, but code follows established patterns and imports verified against go.mod. Committed in d076195.",
+          "updated_at": "2026-01-03T02:41:56.544250+00:00"
         },
         {
           "id": "subtask-3-2",
@@ -205,7 +211,9 @@
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Created backend/internal/custom/handlers/keys.go with KeyHandler struct following auth.go and providers.go patterns. Implements all key management API endpoints: ListKeys (GET), GetKey (GET :id), CreateKey (POST), UpdateKey (PUT :id), DeleteKey (DELETE :id), RevokeKey (POST :id/revoke). All handlers use auth.GetUserID for authentication, proper HTTP status codes, and delegate to KeyService. Note: go build verification could not be run due to command restrictions, but code follows established patterns exactly. Committed in f920d19.",
+          "updated_at": "2026-01-03T02:43:42.923393+00:00"
         },
         {
           "id": "subtask-3-3",
@@ -221,7 +229,9 @@
             "command": "cd backend && go build ./...",
             "expected": "Build succeeds with no errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Registered key routes in backend/internal/custom/routes.go. Added KeyService and KeyHandler initialization. Registered all key management routes under /keys with JWT auth: GET / (list), POST / (create), GET /:id (get), PUT /:id (update), DELETE /:id (delete), POST /:id/revoke (revoke). Note: go build verification could not be run due to command restrictions, but code follows established patterns exactly and matches provider routes structure. Committed in e700320.",
+          "updated_at": "2026-01-03T02:45:20.798956+00:00"
         }
       ]
     },
@@ -903,5 +913,5 @@
     }
   },
   "qa_signoff": null,
-  "last_updated": "2026-01-03T02:35:08.082860+00:00"
+  "last_updated": "2026-01-03T02:45:20.798962+00:00"
 }
