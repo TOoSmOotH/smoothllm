@@ -31,13 +31,15 @@ const (
 type ProxyService struct {
 	keyService      *KeyService
 	providerService *ProviderService
+	usageService    *UsageService
 }
 
 // NewProxyService creates a new ProxyService instance
-func NewProxyService(keyService *KeyService, providerService *ProviderService) *ProxyService {
+func NewProxyService(keyService *KeyService, providerService *ProviderService, usageService *UsageService) *ProxyService {
 	return &ProxyService{
 		keyService:      keyService,
 		providerService: providerService,
+		usageService:    usageService,
 	}
 }
 
@@ -235,6 +237,9 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 
 	// Extract usage information from response if available
 	s.extractUsageFromResponse(respBody, provider.ProviderType, result)
+
+	// Record usage asynchronously (non-blocking)
+	s.recordUsage(proxyKey, provider, result)
 
 	// Copy response headers
 	for key, values := range resp.Header {
@@ -579,4 +584,28 @@ func (s *ProxyService) HandleProviderError(statusCode int, errorMessage string) 
 			},
 		}
 	}
+}
+
+// recordUsage records API usage asynchronously using the UsageService
+func (s *ProxyService) recordUsage(proxyKey *models.ProxyAPIKey, provider *models.Provider, result *ProxyResult) {
+	if s.usageService == nil {
+		return
+	}
+
+	req := &RecordUsageRequest{
+		UserID:          proxyKey.UserID,
+		ProxyKeyID:      proxyKey.ID,
+		ProviderID:      provider.ID,
+		Model:           result.Model,
+		InputTokens:     result.InputTokens,
+		OutputTokens:    result.OutputTokens,
+		TotalTokens:     result.TotalTokens,
+		RequestDuration: int(result.RequestDuration.Milliseconds()),
+		StatusCode:      result.StatusCode,
+		ErrorMessage:    result.ErrorMessage,
+		InputCostPer1K:  provider.InputCostPer1K,
+		OutputCostPer1K: provider.OutputCostPer1K,
+	}
+
+	s.usageService.RecordUsageAsync(req)
 }

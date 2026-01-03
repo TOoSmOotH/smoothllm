@@ -29,10 +29,12 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 	// Initialize services
 	providerService := services.NewProviderService(deps.DB)
 	keyService := services.NewKeyService(deps.DB)
+	usageService := services.NewUsageService(deps.DB)
 
 	// Initialize handlers
 	providerHandler := handlers.NewProviderHandler(providerService)
 	keyHandler := handlers.NewKeyHandler(keyService)
+	usageHandler := handlers.NewUsageHandler(usageService)
 
 	// Provider routes (protected with JWT)
 	providers := v1.Group("/providers")
@@ -58,6 +60,18 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 		keys.DELETE("/:id", keyHandler.DeleteKey)
 		keys.POST("/:id/revoke", keyHandler.RevokeKey)
 	}
+
+	// Usage routes (protected with JWT)
+	usage := v1.Group("/usage")
+	usage.Use(auth.AuthMiddleware(deps.JWT))
+	{
+		usage.GET("", usageHandler.GetUsageSummary)
+		usage.GET("/daily", usageHandler.GetDailyUsage)
+		usage.GET("/by-key", usageHandler.GetUsageByKey)
+		usage.GET("/by-provider", usageHandler.GetUsageByProvider)
+		usage.GET("/by-model", usageHandler.GetUsageByModel)
+		usage.GET("/recent", usageHandler.GetRecentUsage)
+	}
 }
 
 // RegisterProxyRoutes registers the LLM proxy routes at /v1 (outside /api/v1 group)
@@ -67,7 +81,8 @@ func RegisterProxyRoutes(router *gin.Engine, deps Dependencies) {
 	// Initialize services
 	providerService := services.NewProviderService(deps.DB)
 	keyService := services.NewKeyService(deps.DB)
-	proxyService := services.NewProxyService(keyService, providerService)
+	usageService := services.NewUsageService(deps.DB)
+	proxyService := services.NewProxyService(keyService, providerService, usageService)
 
 	// Initialize proxy handler
 	proxyHandler := handlers.NewProxyHandler(proxyService)
