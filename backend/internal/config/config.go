@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"time"
 )
 
@@ -31,10 +32,7 @@ func LoadConfig() *Config {
 		JWTAccessTokenExpiry:  getDurationEnv("JWT_ACCESS_TOKEN_EXPIRY", "15m"),
 		JWTRefreshTokenExpiry: getDurationEnv("JWT_REFRESH_TOKEN_EXPIRY", "168h"),
 
-		AllowedOrigins: []string{
-			getEnv("FRONTEND_URL", "http://localhost:5173"),
-			"http://localhost:3000",
-		},
+		AllowedOrigins: getOriginsEnv("CORS_ORIGINS", "*"),
 	}
 }
 
@@ -54,4 +52,32 @@ func getDurationEnv(key string, defaultValue string) time.Duration {
 	}
 	duration, _ := time.ParseDuration(defaultValue)
 	return duration
+}
+
+func getOriginsEnv(key string, defaultValue string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		value = defaultValue
+	}
+
+	// Handle wildcard
+	if value == "*" {
+		return []string{"*"}
+	}
+
+	// Split comma-separated origins and trim whitespace
+	origins := strings.Split(value, ",")
+	result := make([]string, 0, len(origins))
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	if len(result) == 0 {
+		return []string{"*"}
+	}
+
+	return result
 }
