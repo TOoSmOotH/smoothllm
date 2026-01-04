@@ -152,8 +152,9 @@
           </Button>
         </div>
       </div>
+      </div>
     </div>
- 
+
     <!-- Create User Modal -->
     <div
       v-if="showCreateModal"
