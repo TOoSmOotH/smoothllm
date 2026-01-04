@@ -189,9 +189,22 @@ func (s *KeyService) DeleteKey(userID, keyID uint) error {
 	return nil
 }
 
-// RevokeKey is an alias for DeleteKey - marks a key as inactive/deleted
+// RevokeKey marks a key as inactive without deleting it
 func (s *KeyService) RevokeKey(userID, keyID uint) error {
-	return s.DeleteKey(userID, keyID)
+	key, err := s.getKeyByID(userID, keyID)
+	if err != nil {
+		return err
+	}
+
+	if !key.IsActive {
+		return fmt.Errorf("key is already revoked")
+	}
+
+	if err := s.db.Model(key).Update("is_active", false).Error; err != nil {
+		return fmt.Errorf("failed to revoke key: %w", err)
+	}
+
+	return nil
 }
 
 // ValidateKey validates a proxy API key and returns the associated key record

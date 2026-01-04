@@ -120,8 +120,6 @@ const buttonClasses = computed(() => {
 })
 
 const handleClick = (event: MouseEvent) => {
-  if (!props.disabled && !props.loading) {
-    emit('click', event)
-  }
+  emit('click', event)
 }
 </script>

@@ -16,8 +16,8 @@ type Provider struct {
 
 	IsActive        bool    `gorm:"default:true" json:"is_active"`
 	DefaultModel    string  `gorm:"type:varchar(100)" json:"default_model"`
-	InputCostPer1K  float64 `gorm:"default:0" json:"input_cost_per_1k"`
-	OutputCostPer1K float64 `gorm:"default:0" json:"output_cost_per_1k"`
+	InputCostPer1K  float64 `gorm:"column:input_cost_per_1k;default:0" json:"input_cost_per_1k"`
+	OutputCostPer1K float64 `gorm:"column:output_cost_per_1k;default:0" json:"output_cost_per_1k"`
 
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }

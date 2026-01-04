@@ -226,16 +226,8 @@ test.describe('LLM Providers Management', () => {
     await providerNameInput.clear();
     await providerNameInput.fill(updatedName);
 
-    // Wait a moment for any debouncing
-    await page.waitForTimeout(300);
-
-    // Submit - find the Save Changes button (should be only one visible in the modal)
-    const saveButton = page.getByRole('button', { name: 'Save Changes' });
-    await expect(saveButton).toBeVisible({ timeout: 5000 });
-    await expect(saveButton).toBeEnabled({ timeout: 5000 });
-
-    // Use force click to ensure it registers
-    await saveButton.click({ force: true });
+    // Submit
+    await page.getByRole('button', { name: 'Save Changes' }).click();
 
     // Wait for success toast (increase timeout in case of network delay)
     await expect(page.getByText('Provider updated successfully')).toBeVisible({ timeout: 15000 });

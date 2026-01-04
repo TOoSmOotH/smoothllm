@@ -133,8 +133,8 @@
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="closeModal"
       >
-        <div class="fixed inset-0 bg-black/50" @click="closeModal"></div>
-        <div class="relative bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div class="fixed inset-0 bg-black/50 z-0" @click="closeModal"></div>
+        <div class="relative z-10 bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
           <div class="p-6">
             <h2 class="font-display text-xl text-text-primary mb-6">
               {{ editingKey ? 'Edit API Key' : 'Create API Key' }}
@@ -199,8 +199,8 @@
         v-if="showNewKeyModal && newlyCreatedKey"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
-        <div class="fixed inset-0 bg-black/50"></div>
-        <div class="relative bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-lg w-full">
+        <div class="fixed inset-0 bg-black/50 z-0"></div>
+        <div class="relative z-10 bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-lg w-full">
           <div class="p-6">
             <div class="flex items-center gap-4 mb-6">
               <div class="w-12 h-12 bg-success-500/10 rounded-full flex items-center justify-center">
@@ -255,8 +255,8 @@
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="closeRevokeModal"
       >
-        <div class="fixed inset-0 bg-black/50" @click="closeRevokeModal"></div>
-        <div class="relative bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-md w-full">
+        <div class="fixed inset-0 bg-black/50 z-0" @click="closeRevokeModal"></div>
+        <div class="relative z-10 bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-md w-full">
           <div class="p-6">
             <div class="flex items-center gap-4 mb-4">
               <div class="w-12 h-12 bg-warning-500/10 rounded-full flex items-center justify-center">
@@ -291,8 +291,8 @@
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="closeDeleteModal"
       >
-        <div class="fixed inset-0 bg-black/50" @click="closeDeleteModal"></div>
-        <div class="relative bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-md w-full">
+        <div class="fixed inset-0 bg-black/50 z-0" @click="closeDeleteModal"></div>
+        <div class="relative z-10 bg-bg-primary border border-border-subtle rounded-lg shadow-xl max-w-md w-full">
           <div class="p-6">
             <div class="flex items-center gap-4 mb-4">
               <div class="w-12 h-12 bg-error-500/10 rounded-full flex items-center justify-center">
