@@ -85,8 +85,15 @@ type AnthropicRequest struct {
 
 // AnthropicMessage represents a message in the Anthropic format
 type AnthropicMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string      `json:"role"`
+	Content interface{} `json:"content"` // Can be string or array of content blocks
+}
+
+// AnthropicPassthroughRequest represents any Anthropic API request (for passthrough)
+type AnthropicPassthroughRequest struct {
+	Model     string `json:"model"`
+	MaxTokens int    `json:"max_tokens"`
+	// We don't parse other fields - just pass them through
 }
 
 // ModelInfo contains parsed model routing information
@@ -255,6 +262,130 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 
 	// Extract usage information from response if available
 	s.extractUsageFromResponse(respBody, provider.ProviderType, result)
+
+	// Record usage asynchronously (non-blocking)
+	s.recordUsage(proxyKey, provider, result)
+
+	// Copy response headers
+	for key, values := range resp.Header {
+		for _, value := range values {
+			c.Header(key, value)
+		}
+	}
+
+	// Write the response
+	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), respBody)
+
+	return result, nil
+}
+
+// ProxyAnthropicPassthrough handles Anthropic-format requests and passes them through to the provider
+// This allows Claude Code and other Anthropic-native tools to use the proxy for usage tracking
+func (s *ProxyService) ProxyAnthropicPassthrough(c *gin.Context, proxyKey *models.ProxyAPIKey, provider *models.Provider) (*ProxyResult, error) {
+	startTime := time.Now()
+	result := &ProxyResult{}
+
+	// Verify provider supports Anthropic format
+	if provider.ProviderType != models.ProviderTypeAnthropic && provider.ProviderType != models.ProviderTypeAnthropicMax {
+		result.StatusCode = http.StatusBadRequest
+		result.ErrorMessage = "provider does not support Anthropic API format"
+		return result, fmt.Errorf("provider type %s does not support Anthropic API format", provider.ProviderType)
+	}
+
+	// For OAuth providers, ensure we have a valid access token
+	if provider.IsOAuthProvider() {
+		if !provider.OAuthConnected {
+			result.StatusCode = http.StatusUnauthorized
+			result.ErrorMessage = "OAuth not connected for this provider"
+			return result, fmt.Errorf("OAuth not connected for this provider")
+		}
+		if s.oauthService != nil {
+			if err := s.oauthService.EnsureValidToken(provider); err != nil {
+				result.StatusCode = http.StatusUnauthorized
+				result.ErrorMessage = "failed to refresh OAuth token"
+				return result, fmt.Errorf("failed to refresh OAuth token: %w", err)
+			}
+		}
+	}
+
+	// Read the request body
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		result.StatusCode = http.StatusBadRequest
+		result.ErrorMessage = "failed to read request body"
+		return result, fmt.Errorf("failed to read request body: %w", err)
+	}
+
+	// Parse just enough to get the model for tracking
+	var anthropicReq AnthropicPassthroughRequest
+	if err := json.Unmarshal(bodyBytes, &anthropicReq); err == nil {
+		result.Model = anthropicReq.Model
+	}
+
+	// Build the target URL
+	baseURL := provider.GetBaseURL()
+	targetURL := strings.TrimSuffix(baseURL, "/") + "/v1/messages"
+
+	// Create the proxy request
+	proxyReq, err := http.NewRequest(c.Request.Method, targetURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		result.StatusCode = http.StatusInternalServerError
+		result.ErrorMessage = "failed to create proxy request"
+		return result, fmt.Errorf("failed to create proxy request: %w", err)
+	}
+
+	// Copy headers from original request
+	for key, values := range c.Request.Header {
+		for _, value := range values {
+			// Skip headers we'll set ourselves
+			if strings.ToLower(key) == "authorization" || strings.ToLower(key) == "x-api-key" || strings.ToLower(key) == "host" {
+				continue
+			}
+			proxyReq.Header.Add(key, value)
+		}
+	}
+
+	// Set auth headers based on provider type
+	switch provider.ProviderType {
+	case models.ProviderTypeAnthropic:
+		proxyReq.Header.Set("x-api-key", provider.APIKey)
+	case models.ProviderTypeAnthropicMax:
+		proxyReq.Header.Set("Authorization", "Bearer "+provider.AccessToken)
+	}
+	proxyReq.Header.Set("anthropic-version", AnthropicVersion)
+
+	// Ensure content type is set
+	if proxyReq.Header.Get("Content-Type") == "" {
+		proxyReq.Header.Set("Content-Type", "application/json")
+	}
+
+	// Execute the proxy request
+	client := &http.Client{
+		Timeout: 5 * time.Minute, // Long timeout for LLM responses
+	}
+
+	resp, err := client.Do(proxyReq)
+	if err != nil {
+		result.StatusCode = http.StatusBadGateway
+		result.ErrorMessage = fmt.Sprintf("proxy request failed: %v", err)
+		result.RequestDuration = time.Since(startTime)
+		return result, fmt.Errorf("proxy request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Record timing
+	result.RequestDuration = time.Since(startTime)
+	result.StatusCode = resp.StatusCode
+
+	// Read the response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		result.ErrorMessage = "failed to read response"
+		return result, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Extract usage information from Anthropic response
+	s.extractAnthropicUsage(respBody, result)
 
 	// Record usage asynchronously (non-blocking)
 	s.recordUsage(proxyKey, provider, result)

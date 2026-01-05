@@ -105,7 +105,7 @@ func RegisterProxyRoutes(router *gin.Engine, deps Dependencies) {
 	// Initialize proxy handler
 	proxyHandler := handlers.NewProxyHandler(proxyService)
 
-	// Proxy routes at /v1 (OpenAI-compatible endpoints)
+	// Proxy routes at /v1 (OpenAI-compatible and Anthropic-compatible endpoints)
 	// These use proxy API key authentication (Bearer sk-smoothllm-xxx), not JWT
 	v1Proxy := router.Group("/v1")
 	{
@@ -114,5 +114,8 @@ func RegisterProxyRoutes(router *gin.Engine, deps Dependencies) {
 
 		// OpenAI-compatible models list endpoint
 		v1Proxy.GET("/models", proxyHandler.ListModels)
+
+		// Anthropic-compatible messages endpoint (for Claude Code and other Anthropic SDK clients)
+		v1Proxy.POST("/messages", proxyHandler.Messages)
 	}
 }

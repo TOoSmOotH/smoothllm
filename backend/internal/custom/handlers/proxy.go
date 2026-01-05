@@ -120,3 +120,56 @@ func (h *ProxyHandler) ListModels(c *gin.Context) {
 
 	c.JSON(http.StatusOK, models)
 }
+
+// Messages handles POST /v1/messages
+// This is the Anthropic-compatible endpoint that proxies requests to Claude Max providers
+func (h *ProxyHandler) Messages(c *gin.Context) {
+	// Extract the proxy API key from the Authorization header
+	apiKey, err := h.proxyService.GetProxyKeyFromRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": gin.H{
+				"type":    "authentication_error",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	// Validate the key and get the associated provider
+	proxyKey, provider, err := h.proxyService.ValidateAndGetProvider(apiKey)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": gin.H{
+				"type":    "authentication_error",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	// Proxy the request to Anthropic
+	result, err := h.proxyService.ProxyAnthropicPassthrough(c, proxyKey, provider)
+	if err != nil {
+		// If ProxyAnthropicPassthrough already wrote to the response, don't write again
+		if c.Writer.Written() {
+			return
+		}
+
+		// Handle provider errors appropriately
+		statusCode := http.StatusBadGateway
+		if result != nil && result.StatusCode > 0 {
+			statusCode = result.StatusCode
+		}
+
+		c.JSON(statusCode, gin.H{
+			"error": gin.H{
+				"type":    "api_error",
+				"message": err.Error(),
+			},
+		})
+		return
+	}
+
+	// Response was already written by ProxyAnthropicPassthrough via c.Data()
+}

@@ -27,7 +27,7 @@ func createProxyTestServices(t *testing.T, db *gorm.DB) *ProxyService {
 	keyService := NewKeyService(db)
 	providerService := NewProviderService(db)
 	usageService := NewUsageService(db)
-	return NewProxyService(keyService, providerService, usageService)
+	return NewProxyService(keyService, providerService, usageService, nil)
 }
 
 func TestProxyService_ParseModelName(t *testing.T) {
@@ -493,7 +493,7 @@ func TestProxyService_ValidateAndGetProvider(t *testing.T) {
 		keyService := NewKeyService(db)
 		providerService := NewProviderService(db)
 		usageService := NewUsageService(db)
-		service := NewProxyService(keyService, providerService, usageService)
+		service := NewProxyService(keyService, providerService, usageService, nil)
 
 		// Create provider
 		provider := &models.Provider{
@@ -535,7 +535,7 @@ func TestProxyService_ValidateAndGetProvider(t *testing.T) {
 		keyService := NewKeyService(db)
 		providerService := NewProviderService(db)
 		usageService := NewUsageService(db)
-		service := NewProxyService(keyService, providerService, usageService)
+		service := NewProxyService(keyService, providerService, usageService, nil)
 
 		// Create active provider first
 		provider := &models.Provider{
