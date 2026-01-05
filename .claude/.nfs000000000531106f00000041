@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git worktree:*)",
+      "Bash(git -C /home/mreeves/Projects/Personal/smoothllm/.worktrees/001-we-are-using-a-template-for-the-users-and-rbac-and status)",
+      "Bash(cat:*)",
+      "Bash(go build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git log:*)",
+      "Bash(./scripts/run_e2e.sh:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(go test:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "Bash(docker compose:*)",
+      "Bash(tee:*)"
+    ]
+  }
+}

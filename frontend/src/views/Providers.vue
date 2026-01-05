@@ -576,8 +576,28 @@ const connectOAuth = async (providerId: number) => {
 
   try {
     const { authorization_url } = await providersApi.getOAuthAuthorizeUrl(providerId)
-    // Redirect to Anthropic OAuth
-    window.location.href = authorization_url
+    // Open OAuth in a new popup window
+    const width = 600
+    const height = 700
+    const left = window.screenX + (window.outerWidth - width) / 2
+    const top = window.screenY + (window.outerHeight - height) / 2
+    const popup = window.open(
+      authorization_url,
+      'oauth_popup',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    )
+
+    // Poll for popup closure and refresh providers
+    if (popup) {
+      const pollTimer = setInterval(async () => {
+        if (popup.closed) {
+          clearInterval(pollTimer)
+          connectingOAuthId.value = null
+          // Refresh providers to check if OAuth was connected
+          await providersStore.fetchProviders()
+        }
+      }, 500)
+    }
   } catch (err: unknown) {
     const error = err as { response?: { data?: { error?: string } } }
     toast.error(error.response?.data?.error || 'Failed to start OAuth flow')

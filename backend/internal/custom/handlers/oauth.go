@@ -72,19 +72,51 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 	errorParam := c.Query("error")
 	errorDescription := c.Query("error_description")
 
+	// Helper to render a page that closes the popup
+	renderClosePage := func(success bool, message string) {
+		status := "error"
+		if success {
+			status = "success"
+		}
+		html := `<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth ` + status + `</title>
+    <style>
+        body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #1a1a2e; color: #fff; }
+        .container { text-align: center; padding: 2rem; }
+        .icon { font-size: 48px; margin-bottom: 1rem; }
+        .message { font-size: 18px; margin-bottom: 1rem; }
+        .close-note { font-size: 14px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">` + func() string { if success { return "✓" } else { return "✗" } }() + `</div>
+        <div class="message">` + message + `</div>
+        <div class="close-note">This window will close automatically...</div>
+    </div>
+    <script>
+        setTimeout(function() { window.close(); }, 2000);
+    </script>
+</body>
+</html>`
+		c.Header("Content-Type", "text/html")
+		c.String(http.StatusOK, html)
+	}
+
 	// Handle OAuth errors
 	if errorParam != "" {
-		// Redirect to frontend with error
-		redirectURL := h.frontendURL + "/providers?oauth_error=" + errorParam
+		message := "OAuth error: " + errorParam
 		if errorDescription != "" {
-			redirectURL += "&error_description=" + errorDescription
+			message = errorDescription
 		}
-		c.Redirect(http.StatusFound, redirectURL)
+		renderClosePage(false, message)
 		return
 	}
 
 	if code == "" || state == "" {
-		c.Redirect(http.StatusFound, h.frontendURL+"/providers?oauth_error=missing_parameters")
+		renderClosePage(false, "Missing required parameters")
 		return
 	}
 
@@ -96,14 +128,13 @@ func (h *OAuthHandler) Callback(c *gin.Context) {
 	redirectURI := scheme + "://" + c.Request.Host + "/api/v1/oauth/anthropic/callback"
 
 	// Exchange the code for tokens
-	provider, err := h.oauthService.ExchangeCode(code, state, redirectURI)
+	_, err := h.oauthService.ExchangeCode(code, state, redirectURI)
 	if err != nil {
-		c.Redirect(http.StatusFound, h.frontendURL+"/providers?oauth_error=exchange_failed&error_description="+err.Error())
+		renderClosePage(false, "Failed to connect: "+err.Error())
 		return
 	}
 
-	// Redirect to frontend with success
-	c.Redirect(http.StatusFound, h.frontendURL+"/providers?oauth_success=true&provider_id="+strconv.FormatUint(uint64(provider.ID), 10))
+	renderClosePage(true, "Successfully connected to Claude Max!")
 }
 
 // Disconnect handles POST /oauth/anthropic/disconnect/:id - disconnects OAuth from a provider
