@@ -45,7 +45,7 @@ type CreateProviderRequest struct {
 	Name                 string  `json:"name" binding:"required"`
 	ProviderType         string  `json:"provider_type" binding:"required"`
 	BaseURL              string  `json:"base_url"`
-	APIKey               string  `json:"api_key" binding:"required"`
+	APIKey               string  `json:"api_key"` // Not required for OAuth providers (validated in validateCreateRequest)
 	IsActive             *bool   `json:"is_active"`
 	DefaultModel         string  `json:"default_model"`
 	InputCostPerMillion  float64 `json:"input_cost_per_million"`
