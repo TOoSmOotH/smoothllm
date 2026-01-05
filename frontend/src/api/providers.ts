@@ -4,6 +4,7 @@ import apiClient from '@/api/client'
 export const ProviderType = {
   OPENAI: 'openai',
   ANTHROPIC: 'anthropic',
+  ANTHROPIC_MAX: 'anthropic_max',
   VLLM: 'vllm',
   LOCAL: 'local',
 } as const
@@ -20,6 +21,7 @@ export interface ProviderResponse {
   default_model: string
   input_cost_per_million: number
   output_cost_per_million: number
+  oauth_connected: boolean
   created_at: string
   updated_at: string
 }
@@ -28,7 +30,7 @@ export interface CreateProviderRequest {
   name: string
   provider_type: ProviderTypeValue
   base_url?: string
-  api_key: string
+  api_key?: string // Optional for OAuth providers
   is_active?: boolean
   default_model?: string
   input_cost_per_million?: number
@@ -48,6 +50,10 @@ export interface UpdateProviderRequest {
 
 export interface TestConnectionResponse {
   message: string
+}
+
+export interface OAuthAuthorizeResponse {
+  authorization_url: string
 }
 
 export const providersApi = {
@@ -84,6 +90,22 @@ export const providersApi = {
     payload: CreateProviderRequest
   ): Promise<TestConnectionResponse> {
     const response = await apiClient.post('/providers/test', payload)
+    return response.data
+  },
+
+  // OAuth methods for Claude Max
+  async getOAuthAuthorizeUrl(providerId: number): Promise<OAuthAuthorizeResponse> {
+    const response = await apiClient.get(`/oauth/anthropic/authorize?provider_id=${providerId}`)
+    return response.data
+  },
+
+  async disconnectOAuth(providerId: number): Promise<{ message: string }> {
+    const response = await apiClient.post(`/oauth/anthropic/disconnect/${providerId}`)
+    return response.data
+  },
+
+  async testOAuthConnection(providerId: number): Promise<TestConnectionResponse> {
+    const response = await apiClient.post(`/oauth/anthropic/test/${providerId}`)
     return response.data
   },
 }

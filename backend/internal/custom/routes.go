@@ -30,11 +30,13 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 	providerService := services.NewProviderService(deps.DB)
 	keyService := services.NewKeyService(deps.DB)
 	usageService := services.NewUsageService(deps.DB)
+	oauthService := services.NewOAuthService(deps.DB, providerService, deps.Config.FrontendURL)
 
 	// Initialize handlers
 	providerHandler := handlers.NewProviderHandler(providerService)
 	keyHandler := handlers.NewKeyHandler(keyService)
 	usageHandler := handlers.NewUsageHandler(usageService)
+	oauthHandler := handlers.NewOAuthHandler(oauthService, deps.Config.FrontendURL)
 
 	// Provider routes (protected with JWT)
 	providers := v1.Group("/providers")
@@ -47,6 +49,18 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 		providers.PUT("/:id", providerHandler.UpdateProvider)
 		providers.DELETE("/:id", providerHandler.DeleteProvider)
 		providers.POST("/:id/test", providerHandler.TestConnection)
+	}
+
+	// OAuth routes for Claude Max
+	oauth := v1.Group("/oauth/anthropic")
+	{
+		// Authorize endpoint requires JWT auth (user must be logged in to start OAuth)
+		oauth.GET("/authorize", auth.AuthMiddleware(deps.JWT), oauthHandler.Authorize)
+		// Callback doesn't require JWT auth (comes from Anthropic redirect)
+		oauth.GET("/callback", oauthHandler.Callback)
+		// Disconnect and test require JWT auth
+		oauth.POST("/disconnect/:id", auth.AuthMiddleware(deps.JWT), oauthHandler.Disconnect)
+		oauth.POST("/test/:id", auth.AuthMiddleware(deps.JWT), oauthHandler.TestOAuthConnection)
 	}
 
 	// API Key routes (protected with JWT)
@@ -82,7 +96,8 @@ func RegisterProxyRoutes(router *gin.Engine, deps Dependencies) {
 	providerService := services.NewProviderService(deps.DB)
 	keyService := services.NewKeyService(deps.DB)
 	usageService := services.NewUsageService(deps.DB)
-	proxyService := services.NewProxyService(keyService, providerService, usageService)
+	oauthService := services.NewOAuthService(deps.DB, providerService, deps.Config.FrontendURL)
+	proxyService := services.NewProxyService(keyService, providerService, usageService, oauthService)
 
 	// Initialize proxy handler
 	proxyHandler := handlers.NewProxyHandler(proxyService)

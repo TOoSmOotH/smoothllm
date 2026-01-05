@@ -18,6 +18,7 @@ type Config struct {
 	JWTRefreshTokenExpiry time.Duration
 
 	AllowedOrigins []string
+	FrontendURL    string
 }
 
 func LoadConfig() *Config {
@@ -33,6 +34,7 @@ func LoadConfig() *Config {
 		JWTRefreshTokenExpiry: getDurationEnv("JWT_REFRESH_TOKEN_EXPIRY", "168h"),
 
 		AllowedOrigins: getOriginsEnv("CORS_ORIGINS", "*"),
+		FrontendURL:    getEnv("FRONTEND_URL", "http://localhost:5173"),
 	}
 }
 

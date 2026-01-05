@@ -74,13 +74,48 @@
                 <p class="text-text-primary font-mono">${{ provider.output_cost_per_million.toFixed(2) }}/M</p>
               </div>
             </div>
+            <!-- OAuth Status for Claude Max providers -->
+            <div v-if="provider.provider_type === ProviderType.ANTHROPIC_MAX" class="mt-3 pt-3 border-t border-border-subtle">
+              <div class="flex items-center gap-3">
+                <span
+                  :class="[
+                    'px-2 py-0.5 rounded-full text-xs font-medium',
+                    provider.oauth_connected
+                      ? 'bg-success-500/10 text-success-500'
+                      : 'bg-warning-500/10 text-warning-500'
+                  ]"
+                >
+                  {{ provider.oauth_connected ? 'OAuth Connected' : 'OAuth Not Connected' }}
+                </span>
+                <Button
+                  v-if="!provider.oauth_connected"
+                  variant="primary"
+                  size="sm"
+                  @click="connectOAuth(provider.id)"
+                  :loading="connectingOAuthId === provider.id"
+                >
+                  Connect OAuth
+                </Button>
+                <Button
+                  v-else
+                  variant="outline"
+                  size="sm"
+                  @click="disconnectOAuth(provider.id)"
+                  :loading="disconnectingOAuthId === provider.id"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            </div>
           </div>
           <div class="flex items-center gap-2 ml-4">
             <Button
               variant="ghost"
               size="sm"
-              @click="testProviderConnection(provider.id)"
+              @click="provider.provider_type === ProviderType.ANTHROPIC_MAX && provider.oauth_connected ? testOAuthConnection(provider.id) : testProviderConnection(provider.id)"
               :loading="testingId === provider.id"
+              :disabled="provider.provider_type === ProviderType.ANTHROPIC_MAX && !provider.oauth_connected"
+              :title="provider.provider_type === ProviderType.ANTHROPIC_MAX && !provider.oauth_connected ? 'Connect OAuth first' : 'Test connection'"
             >
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -130,7 +165,8 @@
                   class="w-full font-sans bg-bg-secondary border border-border-default rounded-md text-text-primary px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 transition-all duration-200"
                 >
                   <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
+                  <option value="anthropic">Anthropic (API Key)</option>
+                  <option value="anthropic_max">Claude Max (OAuth)</option>
                   <option value="vllm">vLLM</option>
                   <option value="local">Local / Custom</option>
                 </select>
@@ -145,13 +181,23 @@
                 :error="errors.base_url"
               />
 
+              <!-- API Key input - not shown for OAuth providers -->
               <Input
+                v-if="form.provider_type !== ProviderType.ANTHROPIC_MAX"
                 v-model="form.api_key"
                 type="password"
                 :label="editingProvider ? 'API Key (leave empty to keep current)' : 'API Key'"
                 placeholder="sk-..."
                 :error="errors.api_key"
               />
+
+              <!-- OAuth notice for Claude Max -->
+              <div v-if="form.provider_type === ProviderType.ANTHROPIC_MAX" class="bg-primary-500/10 border border-primary-500/20 rounded-md p-4">
+                <p class="text-sm text-text-secondary">
+                  <strong class="text-text-primary">Claude Max uses OAuth authentication.</strong><br>
+                  After creating the provider, you'll be able to connect your Claude Max subscription via OAuth.
+                </p>
+              </div>
 
               <Input
                 v-model="form.default_model"
@@ -254,7 +300,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { toast } from 'vue-sonner'
 import { useProvidersStore } from '@/stores/providers'
-import { ProviderType, type ProviderResponse, type CreateProviderRequest } from '@/api/providers'
+import { ProviderType, providersApi, type ProviderResponse, type CreateProviderRequest } from '@/api/providers'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -294,6 +340,8 @@ const getBaseUrlHelperText = computed(() => {
       return 'Leave empty for default: https://api.openai.com/v1'
     case ProviderType.ANTHROPIC:
       return 'Leave empty for default: https://api.anthropic.com'
+    case ProviderType.ANTHROPIC_MAX:
+      return 'Leave empty for default: https://api.anthropic.com'
     case ProviderType.VLLM:
       return 'Enter your vLLM server URL (e.g., http://localhost:8000)'
     case ProviderType.LOCAL:
@@ -308,6 +356,8 @@ const getDefaultModelPlaceholder = computed(() => {
     case ProviderType.OPENAI:
       return 'gpt-4o'
     case ProviderType.ANTHROPIC:
+      return 'claude-sonnet-4-20250514'
+    case ProviderType.ANTHROPIC_MAX:
       return 'claude-sonnet-4-20250514'
     case ProviderType.VLLM:
       return 'your-model-name'
@@ -383,8 +433,11 @@ const validateForm = (): boolean => {
     errors.value.provider_type = 'Provider type is required'
   }
 
-  if (!editingProvider.value && !form.value.api_key.trim()) {
-    errors.value.api_key = 'API key is required'
+  // API key is not required for OAuth providers (anthropic_max)
+  if (form.value.provider_type !== ProviderType.ANTHROPIC_MAX) {
+    if (!editingProvider.value && !form.value.api_key.trim()) {
+      errors.value.api_key = 'API key is required'
+    }
   }
 
   if ((form.value.provider_type === ProviderType.LOCAL || form.value.provider_type === ProviderType.VLLM) && !form.value.base_url.trim()) {
@@ -480,6 +533,12 @@ const testProviderConnection = async (id: number) => {
 }
 
 const testConnectionWithForm = async () => {
+  // For OAuth providers, we can't test without connecting first
+  if (form.value.provider_type === ProviderType.ANTHROPIC_MAX) {
+    toast.info('OAuth providers require connecting via OAuth first')
+    return
+  }
+
   if (!form.value.api_key.trim() && !editingProvider.value) {
     toast.error('API key is required to test connection')
     return
@@ -508,8 +567,77 @@ const testConnectionWithForm = async () => {
   }
 }
 
+// OAuth functions
+const connectingOAuthId = ref<number | null>(null)
+const disconnectingOAuthId = ref<number | null>(null)
+
+const connectOAuth = async (providerId: number) => {
+  connectingOAuthId.value = providerId
+
+  try {
+    const { authorization_url } = await providersApi.getOAuthAuthorizeUrl(providerId)
+    // Redirect to Anthropic OAuth
+    window.location.href = authorization_url
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { error?: string } } }
+    toast.error(error.response?.data?.error || 'Failed to start OAuth flow')
+    connectingOAuthId.value = null
+  }
+}
+
+const disconnectOAuth = async (providerId: number) => {
+  disconnectingOAuthId.value = providerId
+
+  try {
+    await providersApi.disconnectOAuth(providerId)
+    toast.success('OAuth disconnected successfully')
+    await providersStore.fetchProviders() // Refresh providers list
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { error?: string } } }
+    toast.error(error.response?.data?.error || 'Failed to disconnect OAuth')
+  } finally {
+    disconnectingOAuthId.value = null
+  }
+}
+
+const testOAuthConnection = async (providerId: number) => {
+  testingId.value = providerId
+
+  try {
+    const response = await providersApi.testOAuthConnection(providerId)
+    toast.success(response.message)
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { error?: string } } }
+    toast.error(error.response?.data?.error || 'OAuth connection test failed')
+  } finally {
+    testingId.value = null
+  }
+}
+
+// Check for OAuth callback results in URL
+const checkOAuthCallback = () => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const oauthSuccess = urlParams.get('oauth_success')
+  const oauthError = urlParams.get('oauth_error')
+  const errorDescription = urlParams.get('error_description')
+
+  if (oauthSuccess === 'true') {
+    toast.success('Successfully connected to Claude Max!')
+    // Clean up URL params
+    window.history.replaceState({}, document.title, window.location.pathname)
+  } else if (oauthError) {
+    const message = errorDescription || `OAuth error: ${oauthError}`
+    toast.error(message)
+    // Clean up URL params
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
+}
+
 // Load providers on mount
 onMounted(async () => {
+  // Check for OAuth callback results first
+  checkOAuthCallback()
+
   try {
     await providersStore.fetchProviders()
   } catch (err) {

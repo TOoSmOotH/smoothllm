@@ -35,6 +35,7 @@ type ProviderResponse struct {
 	DefaultModel         string    `json:"default_model"`
 	InputCostPerMillion  float64   `json:"input_cost_per_million"`
 	OutputCostPerMillion float64   `json:"output_cost_per_million"`
+	OAuthConnected       bool      `json:"oauth_connected"` // Whether OAuth is connected (for anthropic_max)
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
 }
@@ -251,6 +252,7 @@ func (s *ProviderService) buildProviderResponse(provider *models.Provider) Provi
 		DefaultModel:         provider.DefaultModel,
 		InputCostPerMillion:  provider.InputCostPerMillion,
 		OutputCostPerMillion: provider.OutputCostPerMillion,
+		OAuthConnected:       provider.OAuthConnected,
 		CreatedAt:            provider.CreatedAt,
 		UpdatedAt:            provider.UpdatedAt,
 	}
@@ -278,9 +280,11 @@ func (s *ProviderService) validateCreateRequest(req *CreateProviderRequest) erro
 		}
 	}
 
-	// Validate API key
-	if strings.TrimSpace(req.APIKey) == "" {
-		return fmt.Errorf("api_key is required")
+	// Validate API key - not required for OAuth providers (anthropic_max)
+	if req.ProviderType != models.ProviderTypeAnthropicMax {
+		if strings.TrimSpace(req.APIKey) == "" {
+			return fmt.Errorf("api_key is required")
+		}
 	}
 
 	// Validate cost values
@@ -338,7 +342,13 @@ func (s *ProviderService) validateUpdateRequest(req *UpdateProviderRequest) erro
 
 // validateProviderType validates the provider type
 func (s *ProviderService) validateProviderType(providerType string) error {
-	validTypes := []string{models.ProviderTypeOpenAI, models.ProviderTypeAnthropic, models.ProviderTypeVLLM, models.ProviderTypeLocal}
+	validTypes := []string{
+		models.ProviderTypeOpenAI,
+		models.ProviderTypeAnthropic,
+		models.ProviderTypeAnthropicMax,
+		models.ProviderTypeVLLM,
+		models.ProviderTypeLocal,
+	}
 	for _, vt := range validTypes {
 		if providerType == vt {
 			return nil
@@ -364,6 +374,14 @@ func (s *ProviderService) validateBaseURL(baseURL string) error {
 
 // testProviderConnection tests connectivity to a provider
 func (s *ProviderService) testProviderConnection(provider *models.Provider) error {
+	// For OAuth providers, skip this test - they use OAuth test instead
+	if provider.ProviderType == models.ProviderTypeAnthropicMax {
+		if !provider.OAuthConnected {
+			return fmt.Errorf("OAuth not connected - please connect via OAuth first")
+		}
+		return nil // OAuth connection test is handled separately
+	}
+
 	baseURL := provider.GetBaseURL()
 	if baseURL == "" {
 		return fmt.Errorf("no base URL configured for provider")

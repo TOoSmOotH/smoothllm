@@ -32,14 +32,16 @@ type ProxyService struct {
 	keyService      *KeyService
 	providerService *ProviderService
 	usageService    *UsageService
+	oauthService    *OAuthService
 }
 
 // NewProxyService creates a new ProxyService instance
-func NewProxyService(keyService *KeyService, providerService *ProviderService, usageService *UsageService) *ProxyService {
+func NewProxyService(keyService *KeyService, providerService *ProviderService, usageService *UsageService, oauthService *OAuthService) *ProxyService {
 	return &ProxyService{
 		keyService:      keyService,
 		providerService: providerService,
 		usageService:    usageService,
+		oauthService:    oauthService,
 	}
 }
 
@@ -151,6 +153,22 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 	startTime := time.Now()
 	result := &ProxyResult{}
 
+	// For OAuth providers, ensure we have a valid access token
+	if provider.IsOAuthProvider() {
+		if !provider.OAuthConnected {
+			result.StatusCode = http.StatusUnauthorized
+			result.ErrorMessage = "OAuth not connected for this provider"
+			return result, fmt.Errorf("OAuth not connected for this provider")
+		}
+		if s.oauthService != nil {
+			if err := s.oauthService.EnsureValidToken(provider); err != nil {
+				result.StatusCode = http.StatusUnauthorized
+				result.ErrorMessage = "failed to refresh OAuth token"
+				return result, fmt.Errorf("failed to refresh OAuth token: %w", err)
+			}
+		}
+	}
+
 	// Read the request body
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -178,7 +196,7 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 	var requestBody []byte
 
 	switch provider.ProviderType {
-	case models.ProviderTypeAnthropic:
+	case models.ProviderTypeAnthropic, models.ProviderTypeAnthropicMax:
 		targetURL = strings.TrimSuffix(provider.GetBaseURL(), "/") + "/v1/messages"
 		requestBody, err = s.transformToAnthropic(&chatReq, modelInfo.ModelName)
 		if err != nil {
@@ -261,10 +279,22 @@ func (s *ProxyService) ProxyWithReverseProxy(c *gin.Context, provider *models.Pr
 		return fmt.Errorf("no base URL configured for provider")
 	}
 
+	// For OAuth providers, ensure we have a valid access token
+	if provider.IsOAuthProvider() {
+		if !provider.OAuthConnected {
+			return fmt.Errorf("OAuth not connected for this provider")
+		}
+		if s.oauthService != nil {
+			if err := s.oauthService.EnsureValidToken(provider); err != nil {
+				return fmt.Errorf("failed to refresh OAuth token: %w", err)
+			}
+		}
+	}
+
 	// Determine target path based on provider type
 	var targetPath string
 	switch provider.ProviderType {
-	case models.ProviderTypeAnthropic:
+	case models.ProviderTypeAnthropic, models.ProviderTypeAnthropicMax:
 		targetPath = "/v1/messages"
 	default:
 		targetPath = "/v1/chat/completions"
@@ -294,6 +324,9 @@ func (s *ProxyService) ProxyWithReverseProxy(c *gin.Context, provider *models.Pr
 				r.Out.Header.Set("anthropic-version", AnthropicVersion)
 				// Remove Authorization header if present
 				r.Out.Header.Del("Authorization")
+			case models.ProviderTypeAnthropicMax:
+				r.Out.Header.Set("Authorization", "Bearer "+provider.AccessToken)
+				r.Out.Header.Set("anthropic-version", AnthropicVersion)
 			default:
 				r.Out.Header.Set("Authorization", "Bearer "+provider.APIKey)
 			}
@@ -405,6 +438,10 @@ func (s *ProxyService) copyHeaders(original *http.Request, proxy *http.Request, 
 	case models.ProviderTypeAnthropic:
 		proxy.Header.Set("x-api-key", provider.APIKey)
 		proxy.Header.Set("anthropic-version", AnthropicVersion)
+	case models.ProviderTypeAnthropicMax:
+		// Use Bearer token for OAuth-authenticated Claude Max
+		proxy.Header.Set("Authorization", "Bearer "+provider.AccessToken)
+		proxy.Header.Set("anthropic-version", AnthropicVersion)
 	default:
 		proxy.Header.Set("Authorization", "Bearer "+provider.APIKey)
 	}
@@ -418,7 +455,7 @@ func (s *ProxyService) extractUsageFromResponse(body []byte, providerType string
 	}
 
 	switch providerType {
-	case models.ProviderTypeAnthropic:
+	case models.ProviderTypeAnthropic, models.ProviderTypeAnthropicMax:
 		s.extractAnthropicUsage(body, result)
 	default:
 		s.extractOpenAIUsage(body, result)
@@ -492,6 +529,14 @@ func (s *ProxyService) ListModels(provider *models.Provider) (interface{}, error
 			Model{ID: "anthropic/claude-opus-4-20250514", Object: "model", Created: now, OwnedBy: "anthropic"},
 			Model{ID: "anthropic/claude-3-5-sonnet-20241022", Object: "model", Created: now, OwnedBy: "anthropic"},
 			Model{ID: "anthropic/claude-3-5-haiku-20241022", Object: "model", Created: now, OwnedBy: "anthropic"},
+		)
+	case models.ProviderTypeAnthropicMax:
+		// Claude Max subscription has access to all Claude models
+		modelList = append(modelList,
+			Model{ID: "anthropic_max/claude-sonnet-4-20250514", Object: "model", Created: now, OwnedBy: "anthropic"},
+			Model{ID: "anthropic_max/claude-opus-4-20250514", Object: "model", Created: now, OwnedBy: "anthropic"},
+			Model{ID: "anthropic_max/claude-3-5-sonnet-20241022", Object: "model", Created: now, OwnedBy: "anthropic"},
+			Model{ID: "anthropic_max/claude-3-5-haiku-20241022", Object: "model", Created: now, OwnedBy: "anthropic"},
 		)
 	case models.ProviderTypeLocal:
 		// For local providers, just return the default model if configured
