@@ -603,8 +603,8 @@ func (s *ProxyService) recordUsage(proxyKey *models.ProxyAPIKey, provider *model
 		RequestDuration: int(result.RequestDuration.Milliseconds()),
 		StatusCode:      result.StatusCode,
 		ErrorMessage:    result.ErrorMessage,
-		InputCostPer1K:  provider.InputCostPer1K,
-		OutputCostPer1K: provider.OutputCostPer1K,
+		InputCostPerMillion:  provider.InputCostPerMillion,
+		OutputCostPerMillion: provider.OutputCostPerMillion,
 	}
 
 	s.usageService.RecordUsageAsync(req)

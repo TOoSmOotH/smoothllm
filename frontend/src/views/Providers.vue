@@ -67,11 +67,11 @@
               </div>
               <div>
                 <p class="text-text-tertiary mb-1">Input Cost</p>
-                <p class="text-text-primary font-mono">${{ provider.input_cost_per_1k.toFixed(4) }}/1K</p>
+                <p class="text-text-primary font-mono">${{ provider.input_cost_per_million.toFixed(2) }}/M</p>
               </div>
               <div>
                 <p class="text-text-tertiary mb-1">Output Cost</p>
-                <p class="text-text-primary font-mono">${{ provider.output_cost_per_1k.toFixed(4) }}/1K</p>
+                <p class="text-text-primary font-mono">${{ provider.output_cost_per_million.toFixed(2) }}/M</p>
               </div>
             </div>
           </div>
@@ -131,6 +131,7 @@
                 >
                   <option value="openai">OpenAI</option>
                   <option value="anthropic">Anthropic</option>
+                  <option value="vllm">vLLM</option>
                   <option value="local">Local / Custom</option>
                 </select>
                 <p v-if="errors.provider_type" class="mt-1 text-xs text-error-500 font-medium">{{ errors.provider_type }}</p>
@@ -161,18 +162,18 @@
 
               <div class="grid grid-cols-2 gap-4">
                 <Input
-                  v-model="form.input_cost_per_1k"
+                  v-model="form.input_cost_per_million"
                   type="number"
-                  label="Input Cost per 1K tokens ($)"
-                  placeholder="0.0015"
-                  :error="errors.input_cost_per_1k"
+                  label="Input Cost per Million tokens ($)"
+                  placeholder="1.50"
+                  :error="errors.input_cost_per_million"
                 />
                 <Input
-                  v-model="form.output_cost_per_1k"
+                  v-model="form.output_cost_per_million"
                   type="number"
-                  label="Output Cost per 1K tokens ($)"
-                  placeholder="0.002"
-                  :error="errors.output_cost_per_1k"
+                  label="Output Cost per Million tokens ($)"
+                  placeholder="2.00"
+                  :error="errors.output_cost_per_million"
                 />
               </div>
 
@@ -273,8 +274,8 @@ const form = ref({
   base_url: '',
   api_key: '',
   default_model: '',
-  input_cost_per_1k: '',
-  output_cost_per_1k: '',
+  input_cost_per_million: '',
+  output_cost_per_million: '',
   is_active: true,
 })
 
@@ -293,6 +294,8 @@ const getBaseUrlHelperText = computed(() => {
       return 'Leave empty for default: https://api.openai.com/v1'
     case ProviderType.ANTHROPIC:
       return 'Leave empty for default: https://api.anthropic.com'
+    case ProviderType.VLLM:
+      return 'Enter your vLLM server URL (e.g., http://localhost:8000)'
     case ProviderType.LOCAL:
       return 'Enter your local model endpoint URL'
     default:
@@ -306,6 +309,8 @@ const getDefaultModelPlaceholder = computed(() => {
       return 'gpt-4o'
     case ProviderType.ANTHROPIC:
       return 'claude-sonnet-4-20250514'
+    case ProviderType.VLLM:
+      return 'your-model-name'
     case ProviderType.LOCAL:
       return 'your-model-name'
     default:
@@ -328,8 +333,8 @@ const openEditModal = (provider: ProviderResponse) => {
     base_url: provider.base_url || '',
     api_key: '',
     default_model: provider.default_model || '',
-    input_cost_per_1k: provider.input_cost_per_1k.toString(),
-    output_cost_per_1k: provider.output_cost_per_1k.toString(),
+    input_cost_per_million: provider.input_cost_per_million.toString(),
+    output_cost_per_million: provider.output_cost_per_million.toString(),
     is_active: provider.is_active,
   }
   errors.value = {}
@@ -359,8 +364,8 @@ const resetForm = () => {
     base_url: '',
     api_key: '',
     default_model: '',
-    input_cost_per_1k: '',
-    output_cost_per_1k: '',
+    input_cost_per_million: '',
+    output_cost_per_million: '',
     is_active: true,
   }
   errors.value = {}
@@ -382,8 +387,8 @@ const validateForm = (): boolean => {
     errors.value.api_key = 'API key is required'
   }
 
-  if (form.value.provider_type === ProviderType.LOCAL && !form.value.base_url.trim()) {
-    errors.value.base_url = 'Base URL is required for local providers'
+  if ((form.value.provider_type === ProviderType.LOCAL || form.value.provider_type === ProviderType.VLLM) && !form.value.base_url.trim()) {
+    errors.value.base_url = 'Base URL is required for this provider type'
   }
 
   return Object.keys(errors.value).length === 0
@@ -411,12 +416,12 @@ const handleSubmit = async () => {
       payload.default_model = form.value.default_model.trim()
     }
 
-    if (form.value.input_cost_per_1k) {
-      payload.input_cost_per_1k = parseFloat(form.value.input_cost_per_1k)
+    if (form.value.input_cost_per_million) {
+      payload.input_cost_per_million = parseFloat(form.value.input_cost_per_million)
     }
 
-    if (form.value.output_cost_per_1k) {
-      payload.output_cost_per_1k = parseFloat(form.value.output_cost_per_1k)
+    if (form.value.output_cost_per_million) {
+      payload.output_cost_per_million = parseFloat(form.value.output_cost_per_million)
     }
 
     if (editingProvider.value) {

@@ -29,10 +29,10 @@ type UsageRecord struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// CalculateCost computes the cost based on token usage and provider rates
-func (u *UsageRecord) CalculateCost(inputCostPer1K, outputCostPer1K float64) float64 {
-	inputCost := float64(u.InputTokens) / 1000.0 * inputCostPer1K
-	outputCost := float64(u.OutputTokens) / 1000.0 * outputCostPer1K
+// CalculateCost computes the cost based on token usage and provider rates (cost per million tokens)
+func (u *UsageRecord) CalculateCost(inputCostPerMillion, outputCostPerMillion float64) float64 {
+	inputCost := float64(u.InputTokens) / 1000000.0 * inputCostPerMillion
+	outputCost := float64(u.OutputTokens) / 1000000.0 * outputCostPerMillion
 	return inputCost + outputCost
 }
 

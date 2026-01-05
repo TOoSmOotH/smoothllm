@@ -26,41 +26,41 @@ func NewProviderService(db *gorm.DB) *ProviderService {
 // ProviderResponse represents the provider data returned to clients
 // Note: APIKey is never included in responses
 type ProviderResponse struct {
-	ID              uint       `json:"id"`
-	UserID          uint       `json:"user_id"`
-	Name            string     `json:"name"`
-	ProviderType    string     `json:"provider_type"`
-	BaseURL         string     `json:"base_url"`
-	IsActive        bool       `json:"is_active"`
-	DefaultModel    string     `json:"default_model"`
-	InputCostPer1K  float64    `json:"input_cost_per_1k"`
-	OutputCostPer1K float64    `json:"output_cost_per_1k"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID                   uint      `json:"id"`
+	UserID               uint      `json:"user_id"`
+	Name                 string    `json:"name"`
+	ProviderType         string    `json:"provider_type"`
+	BaseURL              string    `json:"base_url"`
+	IsActive             bool      `json:"is_active"`
+	DefaultModel         string    `json:"default_model"`
+	InputCostPerMillion  float64   `json:"input_cost_per_million"`
+	OutputCostPerMillion float64   `json:"output_cost_per_million"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 // CreateProviderRequest represents the request to create a provider
 type CreateProviderRequest struct {
-	Name            string  `json:"name" binding:"required"`
-	ProviderType    string  `json:"provider_type" binding:"required"`
-	BaseURL         string  `json:"base_url"`
-	APIKey          string  `json:"api_key" binding:"required"`
-	IsActive        *bool   `json:"is_active"`
-	DefaultModel    string  `json:"default_model"`
-	InputCostPer1K  float64 `json:"input_cost_per_1k"`
-	OutputCostPer1K float64 `json:"output_cost_per_1k"`
+	Name                 string  `json:"name" binding:"required"`
+	ProviderType         string  `json:"provider_type" binding:"required"`
+	BaseURL              string  `json:"base_url"`
+	APIKey               string  `json:"api_key" binding:"required"`
+	IsActive             *bool   `json:"is_active"`
+	DefaultModel         string  `json:"default_model"`
+	InputCostPerMillion  float64 `json:"input_cost_per_million"`
+	OutputCostPerMillion float64 `json:"output_cost_per_million"`
 }
 
 // UpdateProviderRequest represents the request to update a provider
 type UpdateProviderRequest struct {
-	Name            *string  `json:"name,omitempty"`
-	ProviderType    *string  `json:"provider_type,omitempty"`
-	BaseURL         *string  `json:"base_url,omitempty"`
-	APIKey          *string  `json:"api_key,omitempty"`
-	IsActive        *bool    `json:"is_active,omitempty"`
-	DefaultModel    *string  `json:"default_model,omitempty"`
-	InputCostPer1K  *float64 `json:"input_cost_per_1k,omitempty"`
-	OutputCostPer1K *float64 `json:"output_cost_per_1k,omitempty"`
+	Name                 *string  `json:"name,omitempty"`
+	ProviderType         *string  `json:"provider_type,omitempty"`
+	BaseURL              *string  `json:"base_url,omitempty"`
+	APIKey               *string  `json:"api_key,omitempty"`
+	IsActive             *bool    `json:"is_active,omitempty"`
+	DefaultModel         *string  `json:"default_model,omitempty"`
+	InputCostPerMillion  *float64 `json:"input_cost_per_million,omitempty"`
+	OutputCostPerMillion *float64 `json:"output_cost_per_million,omitempty"`
 }
 
 // ListProviders returns all providers for a user
@@ -103,15 +103,15 @@ func (s *ProviderService) CreateProvider(userID uint, req *CreateProviderRequest
 	}
 
 	provider := models.Provider{
-		UserID:          userID,
-		Name:            req.Name,
-		ProviderType:    req.ProviderType,
-		BaseURL:         req.BaseURL,
-		APIKey:          req.APIKey,
-		IsActive:        isActive,
-		DefaultModel:    req.DefaultModel,
-		InputCostPer1K:  req.InputCostPer1K,
-		OutputCostPer1K: req.OutputCostPer1K,
+		UserID:               userID,
+		Name:                 req.Name,
+		ProviderType:         req.ProviderType,
+		BaseURL:              req.BaseURL,
+		APIKey:               req.APIKey,
+		IsActive:             isActive,
+		DefaultModel:         req.DefaultModel,
+		InputCostPerMillion:  req.InputCostPerMillion,
+		OutputCostPerMillion: req.OutputCostPerMillion,
 	}
 
 	if err := s.db.Create(&provider).Error; err != nil {
@@ -154,11 +154,11 @@ func (s *ProviderService) UpdateProvider(userID, providerID uint, req *UpdatePro
 	if req.DefaultModel != nil {
 		updates["default_model"] = *req.DefaultModel
 	}
-	if req.InputCostPer1K != nil {
-		updates["input_cost_per_1k"] = *req.InputCostPer1K
+	if req.InputCostPerMillion != nil {
+		updates["input_cost_per_million"] = *req.InputCostPerMillion
 	}
-	if req.OutputCostPer1K != nil {
-		updates["output_cost_per_1k"] = *req.OutputCostPer1K
+	if req.OutputCostPerMillion != nil {
+		updates["output_cost_per_million"] = *req.OutputCostPerMillion
 	}
 
 	if len(updates) > 0 {
@@ -242,17 +242,17 @@ func (s *ProviderService) getProviderByID(userID, providerID uint) (*models.Prov
 // Note: APIKey is never included in the response
 func (s *ProviderService) buildProviderResponse(provider *models.Provider) ProviderResponse {
 	return ProviderResponse{
-		ID:              provider.ID,
-		UserID:          provider.UserID,
-		Name:            provider.Name,
-		ProviderType:    provider.ProviderType,
-		BaseURL:         provider.GetBaseURL(),
-		IsActive:        provider.IsActive,
-		DefaultModel:    provider.DefaultModel,
-		InputCostPer1K:  provider.InputCostPer1K,
-		OutputCostPer1K: provider.OutputCostPer1K,
-		CreatedAt:       provider.CreatedAt,
-		UpdatedAt:       provider.UpdatedAt,
+		ID:                   provider.ID,
+		UserID:               provider.UserID,
+		Name:                 provider.Name,
+		ProviderType:         provider.ProviderType,
+		BaseURL:              provider.GetBaseURL(),
+		IsActive:             provider.IsActive,
+		DefaultModel:         provider.DefaultModel,
+		InputCostPerMillion:  provider.InputCostPerMillion,
+		OutputCostPerMillion: provider.OutputCostPerMillion,
+		CreatedAt:            provider.CreatedAt,
+		UpdatedAt:            provider.UpdatedAt,
 	}
 }
 
@@ -284,11 +284,11 @@ func (s *ProviderService) validateCreateRequest(req *CreateProviderRequest) erro
 	}
 
 	// Validate cost values
-	if req.InputCostPer1K < 0 {
-		return fmt.Errorf("input_cost_per_1k cannot be negative")
+	if req.InputCostPerMillion < 0 {
+		return fmt.Errorf("input_cost_per_million cannot be negative")
 	}
-	if req.OutputCostPer1K < 0 {
-		return fmt.Errorf("output_cost_per_1k cannot be negative")
+	if req.OutputCostPerMillion < 0 {
+		return fmt.Errorf("output_cost_per_million cannot be negative")
 	}
 
 	return nil
@@ -326,11 +326,11 @@ func (s *ProviderService) validateUpdateRequest(req *UpdateProviderRequest) erro
 	}
 
 	// Validate cost values if provided
-	if req.InputCostPer1K != nil && *req.InputCostPer1K < 0 {
-		return fmt.Errorf("input_cost_per_1k cannot be negative")
+	if req.InputCostPerMillion != nil && *req.InputCostPerMillion < 0 {
+		return fmt.Errorf("input_cost_per_million cannot be negative")
 	}
-	if req.OutputCostPer1K != nil && *req.OutputCostPer1K < 0 {
-		return fmt.Errorf("output_cost_per_1k cannot be negative")
+	if req.OutputCostPerMillion != nil && *req.OutputCostPerMillion < 0 {
+		return fmt.Errorf("output_cost_per_million cannot be negative")
 	}
 
 	return nil
@@ -338,7 +338,7 @@ func (s *ProviderService) validateUpdateRequest(req *UpdateProviderRequest) erro
 
 // validateProviderType validates the provider type
 func (s *ProviderService) validateProviderType(providerType string) error {
-	validTypes := []string{models.ProviderTypeOpenAI, models.ProviderTypeAnthropic, models.ProviderTypeLocal}
+	validTypes := []string{models.ProviderTypeOpenAI, models.ProviderTypeAnthropic, models.ProviderTypeVLLM, models.ProviderTypeLocal}
 	for _, vt := range validTypes {
 		if providerType == vt {
 			return nil
@@ -377,6 +377,9 @@ func (s *ProviderService) testProviderConnection(provider *models.Provider) erro
 	case models.ProviderTypeAnthropic:
 		// Anthropic doesn't have a simple models endpoint, we'll check the base URL is reachable
 		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/messages"
+	case models.ProviderTypeVLLM:
+		// vLLM uses OpenAI-compatible API
+		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
 	case models.ProviderTypeLocal:
 		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
 	default:

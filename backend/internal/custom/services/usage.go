@@ -104,18 +104,18 @@ type UsageRecordResponse struct {
 
 // RecordUsageRequest represents the data needed to record a usage event
 type RecordUsageRequest struct {
-	UserID          uint
-	ProxyKeyID      uint
-	ProviderID      uint
-	Model           string
-	InputTokens     int
-	OutputTokens    int
-	TotalTokens     int
-	RequestDuration int // milliseconds
-	StatusCode      int
-	ErrorMessage    string
-	InputCostPer1K  float64
-	OutputCostPer1K float64
+	UserID               uint
+	ProxyKeyID           uint
+	ProviderID           uint
+	Model                string
+	InputTokens          int
+	OutputTokens         int
+	TotalTokens          int
+	RequestDuration      int // milliseconds
+	StatusCode           int
+	ErrorMessage         string
+	InputCostPerMillion  float64
+	OutputCostPerMillion float64
 }
 
 // UsageQueryParams represents query parameters for filtering usage data
@@ -150,8 +150,8 @@ func (s *UsageService) RecordUsage(req *RecordUsageRequest) (*models.UsageRecord
 		ErrorMessage:    req.ErrorMessage,
 	}
 
-	// Calculate cost based on provider rates
-	record.Cost = record.CalculateCost(req.InputCostPer1K, req.OutputCostPer1K)
+	// Calculate cost based on provider rates (cost per million tokens)
+	record.Cost = record.CalculateCost(req.InputCostPerMillion, req.OutputCostPerMillion)
 
 	if err := s.db.Create(record).Error; err != nil {
 		return nil, fmt.Errorf("failed to record usage: %w", err)

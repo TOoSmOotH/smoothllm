@@ -81,17 +81,17 @@ func TestProviderService_CreateProvider(t *testing.T) {
 		service := NewProviderService(db)
 
 		req := &CreateProviderRequest{
-			Name:            "Costed Provider",
-			ProviderType:    models.ProviderTypeOpenAI,
-			APIKey:          "sk-test",
-			InputCostPer1K:  0.01,
-			OutputCostPer1K: 0.03,
+			Name:                 "Costed Provider",
+			ProviderType:         models.ProviderTypeOpenAI,
+			APIKey:               "sk-test",
+			InputCostPerMillion:  10.0,
+			OutputCostPerMillion: 30.0,
 		}
 
 		result, err := service.CreateProvider(1, req)
 		require.NoError(t, err)
-		assert.Equal(t, 0.01, result.InputCostPer1K)
-		assert.Equal(t, 0.03, result.OutputCostPer1K)
+		assert.Equal(t, 10.0, result.InputCostPerMillion)
+		assert.Equal(t, 30.0, result.OutputCostPerMillion)
 	})
 
 	t.Run("creates provider with default model", func(t *testing.T) {
@@ -229,16 +229,16 @@ func TestProviderService_CreateProvider(t *testing.T) {
 		service := NewProviderService(db)
 
 		req := &CreateProviderRequest{
-			Name:           "Negative Cost",
-			ProviderType:   models.ProviderTypeOpenAI,
-			APIKey:         "sk-test",
-			InputCostPer1K: -0.01,
+			Name:                "Negative Cost",
+			ProviderType:        models.ProviderTypeOpenAI,
+			APIKey:              "sk-test",
+			InputCostPerMillion: -10.0,
 		}
 
 		result, err := service.CreateProvider(1, req)
 		assert.Error(t, err)
 		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "input_cost_per_1k cannot be negative")
+		assert.Contains(t, err.Error(), "input_cost_per_million cannot be negative")
 	})
 
 	t.Run("fails for negative output cost", func(t *testing.T) {
@@ -246,16 +246,16 @@ func TestProviderService_CreateProvider(t *testing.T) {
 		service := NewProviderService(db)
 
 		req := &CreateProviderRequest{
-			Name:            "Negative Cost",
-			ProviderType:    models.ProviderTypeOpenAI,
-			APIKey:          "sk-test",
-			OutputCostPer1K: -0.01,
+			Name:                 "Negative Cost",
+			ProviderType:         models.ProviderTypeOpenAI,
+			APIKey:               "sk-test",
+			OutputCostPerMillion: -10.0,
 		}
 
 		result, err := service.CreateProvider(1, req)
 		assert.Error(t, err)
 		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "output_cost_per_1k cannot be negative")
+		assert.Contains(t, err.Error(), "output_cost_per_million cannot be negative")
 	})
 }
 
@@ -398,9 +398,7 @@ func TestProviderService_UpdateProvider(t *testing.T) {
 		assert.Equal(t, models.ProviderTypeAnthropic, updated.ProviderType)
 	})
 
-	// Note: Cost update test skipped due to column naming mismatch between Go field name
-	// (InputCostPer1K -> input_cost_per1_k) and update map key (input_cost_per_1k).
-	// The costs are set correctly on creation, so testing update isn't critical.
+	// Note: Cost update test skipped - costs are set correctly on creation.
 
 	t.Run("deactivates provider", func(t *testing.T) {
 		db := setupProviderTestDB(t)

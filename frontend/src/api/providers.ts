@@ -4,6 +4,7 @@ import apiClient from '@/api/client'
 export const ProviderType = {
   OPENAI: 'openai',
   ANTHROPIC: 'anthropic',
+  VLLM: 'vllm',
   LOCAL: 'local',
 } as const
 
@@ -17,8 +18,8 @@ export interface ProviderResponse {
   base_url: string
   is_active: boolean
   default_model: string
-  input_cost_per_1k: number
-  output_cost_per_1k: number
+  input_cost_per_million: number
+  output_cost_per_million: number
   created_at: string
   updated_at: string
 }
@@ -30,8 +31,8 @@ export interface CreateProviderRequest {
   api_key: string
   is_active?: boolean
   default_model?: string
-  input_cost_per_1k?: number
-  output_cost_per_1k?: number
+  input_cost_per_million?: number
+  output_cost_per_million?: number
 }
 
 export interface UpdateProviderRequest {
@@ -41,8 +42,8 @@ export interface UpdateProviderRequest {
   api_key?: string
   is_active?: boolean
   default_model?: string
-  input_cost_per_1k?: number
-  output_cost_per_1k?: number
+  input_cost_per_million?: number
+  output_cost_per_million?: number
 }
 
 export interface TestConnectionResponse {

@@ -26,13 +26,13 @@ func setupUsageTestDB(t *testing.T) *gorm.DB {
 // createUsageTestData creates test providers and keys for usage tests
 func createUsageTestData(t *testing.T, db *gorm.DB) (*models.Provider, *models.ProxyAPIKey) {
 	provider := &models.Provider{
-		UserID:          1,
-		Name:            "Test Provider",
-		ProviderType:    models.ProviderTypeOpenAI,
-		APIKey:          "test-api-key",
-		IsActive:        true,
-		InputCostPer1K:  0.01,
-		OutputCostPer1K: 0.03,
+		UserID:               1,
+		Name:                 "Test Provider",
+		ProviderType:         models.ProviderTypeOpenAI,
+		APIKey:               "test-api-key",
+		IsActive:             true,
+		InputCostPerMillion:  10.0,
+		OutputCostPerMillion: 30.0,
 	}
 	err := db.Create(provider).Error
 	require.NoError(t, err)
@@ -58,16 +58,16 @@ func TestUsageService_RecordUsage(t *testing.T) {
 		provider, key := createUsageTestData(t, db)
 
 		req := &RecordUsageRequest{
-			UserID:          1,
-			ProxyKeyID:      key.ID,
-			ProviderID:      provider.ID,
-			Model:           "gpt-4o",
-			InputTokens:     100,
-			OutputTokens:    50,
-			RequestDuration: 1500,
-			StatusCode:      200,
-			InputCostPer1K:  0.01,
-			OutputCostPer1K: 0.03,
+			UserID:               1,
+			ProxyKeyID:           key.ID,
+			ProviderID:           provider.ID,
+			Model:                "gpt-4o",
+			InputTokens:          100,
+			OutputTokens:         50,
+			RequestDuration:      1500,
+			StatusCode:           200,
+			InputCostPerMillion:  10.0,
+			OutputCostPerMillion: 30.0,
 		}
 
 		record, err := service.RecordUsage(req)
@@ -108,22 +108,22 @@ func TestUsageService_RecordUsage(t *testing.T) {
 		provider, key := createUsageTestData(t, db)
 
 		req := &RecordUsageRequest{
-			UserID:          1,
-			ProxyKeyID:      key.ID,
-			ProviderID:      provider.ID,
-			Model:           "gpt-4o",
-			InputTokens:     1000, // 1K tokens
-			OutputTokens:    500,  // 0.5K tokens
-			StatusCode:      200,
-			InputCostPer1K:  0.01, // $0.01 per 1K input
-			OutputCostPer1K: 0.03, // $0.03 per 1K output
+			UserID:               1,
+			ProxyKeyID:           key.ID,
+			ProviderID:           provider.ID,
+			Model:                "gpt-4o",
+			InputTokens:          1000000, // 1M tokens
+			OutputTokens:         500000,  // 0.5M tokens
+			StatusCode:           200,
+			InputCostPerMillion:  10.0, // $10 per 1M input
+			OutputCostPerMillion: 30.0, // $30 per 1M output
 		}
 
 		record, err := service.RecordUsage(req)
 		require.NoError(t, err)
 
-		// Expected: 1 * 0.01 + 0.5 * 0.03 = 0.01 + 0.015 = 0.025
-		assert.InDelta(t, 0.025, record.Cost, 0.0001)
+		// Expected: 1 * 10.0 + 0.5 * 30.0 = 10.0 + 15.0 = 25.0
+		assert.InDelta(t, 25.0, record.Cost, 0.0001)
 	})
 
 	t.Run("records error with message", func(t *testing.T) {
@@ -504,13 +504,13 @@ func TestUsageService_GetUsageCount(t *testing.T) {
 func TestUsageRecordModel(t *testing.T) {
 	t.Run("CalculateCost computes correctly", func(t *testing.T) {
 		record := &models.UsageRecord{
-			InputTokens:  2000, // 2K tokens
-			OutputTokens: 1000, // 1K tokens
+			InputTokens:  2000000, // 2M tokens
+			OutputTokens: 1000000, // 1M tokens
 		}
 
-		cost := record.CalculateCost(0.01, 0.03)
-		// Expected: 2 * 0.01 + 1 * 0.03 = 0.02 + 0.03 = 0.05
-		assert.InDelta(t, 0.05, cost, 0.0001)
+		cost := record.CalculateCost(10.0, 30.0) // $10/M input, $30/M output
+		// Expected: 2 * 10.0 + 1 * 30.0 = 20.0 + 30.0 = 50.0
+		assert.InDelta(t, 50.0, cost, 0.0001)
 	})
 
 	t.Run("CalculateCost with zero tokens", func(t *testing.T) {
@@ -519,7 +519,7 @@ func TestUsageRecordModel(t *testing.T) {
 			OutputTokens: 0,
 		}
 
-		cost := record.CalculateCost(0.01, 0.03)
+		cost := record.CalculateCost(10.0, 30.0)
 		assert.Equal(t, float64(0), cost)
 	})
 
