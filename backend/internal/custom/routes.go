@@ -32,6 +32,9 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 	usageService := services.NewUsageService(deps.DB)
 	oauthService := services.NewOAuthService(deps.DB, providerService, deps.Config.FrontendURL)
 
+	// Wire up OAuth service to provider service (for token refresh on create)
+	providerService.SetOAuthService(oauthService)
+
 	// Initialize handlers
 	providerHandler := handlers.NewProviderHandler(providerService)
 	keyHandler := handlers.NewKeyHandler(keyService)

@@ -15,12 +15,18 @@ import (
 
 // ProviderService handles provider CRUD operations
 type ProviderService struct {
-	db *gorm.DB
+	db           *gorm.DB
+	oauthService *OAuthService
 }
 
 // NewProviderService creates a new ProviderService instance
 func NewProviderService(db *gorm.DB) *ProviderService {
 	return &ProviderService{db: db}
+}
+
+// SetOAuthService sets the OAuth service (to avoid circular dependency)
+func (s *ProviderService) SetOAuthService(oauthService *OAuthService) {
+	s.oauthService = oauthService
 }
 
 // ProviderResponse represents the provider data returned to clients
@@ -113,6 +119,34 @@ func (s *ProviderService) CreateProvider(userID uint, req *CreateProviderRequest
 		DefaultModel:         req.DefaultModel,
 		InputCostPerMillion:  req.InputCostPerMillion,
 		OutputCostPerMillion: req.OutputCostPerMillion,
+	}
+
+	// For anthropic_max, the API key is actually a refresh token
+	if req.ProviderType == models.ProviderTypeAnthropicMax && req.APIKey != "" {
+		provider.RefreshToken = req.APIKey
+		provider.APIKey = "" // Don't store refresh token as API key
+
+		// Try to get an access token using the refresh token
+		if s.oauthService != nil {
+			// Create provider first so we can refresh the token
+			if err := s.db.Create(&provider).Error; err != nil {
+				return nil, fmt.Errorf("failed to create provider: %w", err)
+			}
+
+			// Refresh the token to validate it and get an access token
+			if err := s.oauthService.RefreshAccessToken(&provider); err != nil {
+				// Delete the provider if token refresh fails
+				s.db.Delete(&provider)
+				return nil, fmt.Errorf("invalid refresh token: %w", err)
+			}
+
+			// Mark as connected
+			provider.OAuthConnected = true
+			s.db.Save(&provider)
+
+			response := s.buildProviderResponse(&provider)
+			return &response, nil
+		}
 	}
 
 	if err := s.db.Create(&provider).Error; err != nil {
@@ -280,11 +314,12 @@ func (s *ProviderService) validateCreateRequest(req *CreateProviderRequest) erro
 		}
 	}
 
-	// Validate API key - not required for OAuth providers (anthropic_max)
-	if req.ProviderType != models.ProviderTypeAnthropicMax {
-		if strings.TrimSpace(req.APIKey) == "" {
-			return fmt.Errorf("api_key is required")
+	// Validate API key / refresh token
+	if strings.TrimSpace(req.APIKey) == "" {
+		if req.ProviderType == models.ProviderTypeAnthropicMax {
+			return fmt.Errorf("refresh_token is required for Claude Max providers")
 		}
+		return fmt.Errorf("api_key is required")
 	}
 
 	// Validate cost values

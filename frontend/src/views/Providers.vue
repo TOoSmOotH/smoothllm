@@ -74,9 +74,9 @@
                 <p class="text-text-primary font-mono">${{ provider.output_cost_per_million.toFixed(2) }}/M</p>
               </div>
             </div>
-            <!-- OAuth Status for Claude Max providers -->
+            <!-- Token Status for Claude Max providers -->
             <div v-if="provider.provider_type === ProviderType.ANTHROPIC_MAX" class="mt-3 pt-3 border-t border-border-subtle">
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
                 <span
                   :class="[
                     'px-2 py-0.5 rounded-full text-xs font-medium',
@@ -85,26 +85,8 @@
                       : 'bg-warning-500/10 text-warning-500'
                   ]"
                 >
-                  {{ provider.oauth_connected ? 'OAuth Connected' : 'OAuth Not Connected' }}
+                  {{ provider.oauth_connected ? 'Token Valid' : 'Token Not Configured' }}
                 </span>
-                <Button
-                  v-if="!provider.oauth_connected"
-                  variant="primary"
-                  size="sm"
-                  @click="connectOAuth(provider.id)"
-                  :loading="connectingOAuthId === provider.id"
-                >
-                  Connect OAuth
-                </Button>
-                <Button
-                  v-else
-                  variant="outline"
-                  size="sm"
-                  @click="disconnectOAuth(provider.id)"
-                  :loading="disconnectingOAuthId === provider.id"
-                >
-                  Disconnect
-                </Button>
               </div>
             </div>
           </div>
@@ -191,12 +173,25 @@
                 :error="errors.api_key"
               />
 
-              <!-- OAuth notice for Claude Max -->
-              <div v-if="form.provider_type === ProviderType.ANTHROPIC_MAX" class="bg-primary-500/10 border border-primary-500/20 rounded-md p-4">
-                <p class="text-sm text-text-secondary">
-                  <strong class="text-text-primary">Claude Max uses OAuth authentication.</strong><br>
-                  After creating the provider, you'll be able to connect your Claude Max subscription via OAuth.
-                </p>
+              <!-- OAuth token input for Claude Max -->
+              <div v-if="form.provider_type === ProviderType.ANTHROPIC_MAX" class="space-y-3">
+                <div class="bg-primary-500/10 border border-primary-500/20 rounded-md p-4">
+                  <p class="text-sm text-text-secondary mb-2">
+                    <strong class="text-text-primary">Claude Max uses OAuth tokens.</strong>
+                  </p>
+                  <p class="text-xs text-text-tertiary">
+                    To get your refresh token, run <code class="bg-bg-tertiary px-1 rounded">claude auth status</code> in Claude Code CLI,
+                    or find it in <code class="bg-bg-tertiary px-1 rounded">~/.claude/credentials.json</code>
+                  </p>
+                </div>
+                <Input
+                  v-model="form.api_key"
+                  type="password"
+                  label="Refresh Token"
+                  placeholder="sk-ant-ort01-..."
+                  helper-text="Your Claude Max refresh token (starts with sk-ant-ort01-)"
+                  :error="errors.api_key"
+                />
               </div>
 
               <Input
@@ -433,9 +428,11 @@ const validateForm = (): boolean => {
     errors.value.provider_type = 'Provider type is required'
   }
 
-  // API key is not required for OAuth providers (anthropic_max)
-  if (form.value.provider_type !== ProviderType.ANTHROPIC_MAX) {
-    if (!editingProvider.value && !form.value.api_key.trim()) {
+  // API key / refresh token validation
+  if (!editingProvider.value && !form.value.api_key.trim()) {
+    if (form.value.provider_type === ProviderType.ANTHROPIC_MAX) {
+      errors.value.api_key = 'Refresh token is required'
+    } else {
       errors.value.api_key = 'API key is required'
     }
   }
