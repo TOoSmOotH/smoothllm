@@ -177,11 +177,13 @@
               <div v-if="form.provider_type === ProviderType.ANTHROPIC_MAX" class="space-y-3">
                 <div class="bg-primary-500/10 border border-primary-500/20 rounded-md p-4">
                   <p class="text-sm text-text-secondary mb-2">
-                    <strong class="text-text-primary">Claude Max uses OAuth tokens.</strong>
+                    <strong class="text-text-primary">Claude Max uses OAuth tokens from Claude Code CLI.</strong>
+                  </p>
+                  <p class="text-xs text-text-tertiary mb-2">
+                    First, authenticate with Claude Code: <code class="bg-bg-tertiary px-1 rounded">claude auth login</code>
                   </p>
                   <p class="text-xs text-text-tertiary">
-                    To get your refresh token, run <code class="bg-bg-tertiary px-1 rounded">claude auth status</code> in Claude Code CLI,
-                    or find it in <code class="bg-bg-tertiary px-1 rounded">~/.claude/credentials.json</code>
+                    Then get your refresh token: <code class="bg-bg-tertiary px-1 rounded">jq -r '.claudeAiOauth.refreshToken' ~/.claude/.credentials.json</code>
                   </p>
                 </div>
                 <Input
