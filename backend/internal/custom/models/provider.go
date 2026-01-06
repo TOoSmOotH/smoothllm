@@ -48,7 +48,7 @@ var DefaultBaseURLs = map[string]string{
 	ProviderTypeAnthropic:        "https://api.anthropic.com",
 	ProviderTypeAnthropicMax:     "https://api.anthropic.com",
 	ProviderTypeZai:              "https://open.bigmodel.cn/api/paas/v4/",
-	ProviderTypeZaiInternational: "https://api.z.ai/api/paas/v4/",
+	ProviderTypeZaiInternational: "https://api.z.ai/api/coding/paas/v4",
 }
 
 // GetBaseURL returns the provider's base URL, falling back to default if empty

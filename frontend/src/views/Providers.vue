@@ -357,7 +357,7 @@ const getBaseUrlHelperText = computed(() => {
     case ProviderType.ZAI:
       return 'Leave empty for default: https://api.z.ai/api/paas/v4/'
     case ProviderType.ZAI_INTERNATIONAL:
-      return 'Leave empty for default: https://api.z.ai/api/paas/v4/'
+      return 'Leave empty for default: https://api.z.ai/api/coding/paas/v4'
     default:
       return ''
   }
