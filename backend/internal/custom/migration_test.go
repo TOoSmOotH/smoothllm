@@ -15,7 +15,7 @@ func TestMigration_DropProviderID(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:?_foreign_keys=on"), &gorm.Config{})
 	require.NoError(t, err)
 
-	// Manually create the table with the old column and a foreign key constraint
+	// Manually create the table with the old column, foreign key constraint, and indexes
 	err = db.Exec(`
 		CREATE TABLE proxy_api_keys (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +34,12 @@ func TestMigration_DropProviderID(t *testing.T) {
 		)
 	`).Error
 	require.NoError(t, err)
+
+	err = db.Exec("CREATE UNIQUE INDEX idx_proxy_api_keys_key_hash ON proxy_api_keys(key_hash)").Error
+	require.NoError(t, err)
+	err = db.Exec("CREATE INDEX idx_proxy_api_keys_user_id ON proxy_api_keys(user_id)").Error
+	require.NoError(t, err)
+
 	err = db.AutoMigrate(&models.Provider{}, &models.KeyAllowedProvider{})
 	require.NoError(t, err)
 
@@ -69,5 +75,5 @@ func TestMigration_DropProviderID(t *testing.T) {
 		Name:      "New Key",
 	}
 	err = db.Create(&newKey).Error
-	assert.NoError(t, err, "should be able to create a new key without provider_id column")
+	assert.NoError(t, err, "should be able to create a new key without provider_id column and with reconstructed indexes")
 }

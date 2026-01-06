@@ -65,6 +65,11 @@ func migrateExistingData(db *gorm.DB) error {
 				return err
 			}
 
+			// Drop indexes on old table to prevent conflict with new table indexes in SQLite
+			// SQLite index names are database-wide, and GORM AutoMigrate will try to create them on the new table.
+			_ = tx.Migrator().DropIndex("proxy_api_keys_old", "idx_proxy_api_keys_key_hash")
+			_ = tx.Migrator().DropIndex("proxy_api_keys_old", "idx_proxy_api_keys_user_id")
+
 			// Create new table via AutoMigrate
 			if err := tx.AutoMigrate(&models.ProxyAPIKey{}); err != nil {
 				return err
