@@ -37,6 +37,7 @@ const (
 	ProviderTypeAnthropicMax = "anthropic_max" // Claude Max subscription via OAuth
 	ProviderTypeVLLM         = "vllm"
 	ProviderTypeLocal        = "local"
+	ProviderTypeZai          = "zai"
 )
 
 // DefaultBaseURLs for known providers
@@ -44,6 +45,7 @@ var DefaultBaseURLs = map[string]string{
 	ProviderTypeOpenAI:       "https://api.openai.com",
 	ProviderTypeAnthropic:    "https://api.anthropic.com",
 	ProviderTypeAnthropicMax: "https://api.anthropic.com",
+	ProviderTypeZai:          "https://api.z.ai/api/paas/v4/",
 }
 
 // GetBaseURL returns the provider's base URL, falling back to default if empty

@@ -7,6 +7,7 @@ export const ProviderType = {
   ANTHROPIC_MAX: 'anthropic_max',
   VLLM: 'vllm',
   LOCAL: 'local',
+  ZAI: 'zai',
 } as const
 
 export type ProviderTypeValue = (typeof ProviderType)[keyof typeof ProviderType]

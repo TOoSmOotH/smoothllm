@@ -408,6 +408,7 @@ func (s *ProviderService) validateProviderType(providerType string) error {
 		models.ProviderTypeAnthropicMax,
 		models.ProviderTypeVLLM,
 		models.ProviderTypeLocal,
+		models.ProviderTypeZai,
 	}
 	for _, vt := range validTypes {
 		if providerType == vt {
@@ -460,6 +461,8 @@ func (s *ProviderService) testProviderConnection(provider *models.Provider) erro
 		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
 	case models.ProviderTypeLocal:
 		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	case models.ProviderTypeZai:
+		testURL = strings.TrimSuffix(baseURL, "/") + "/models"
 	default:
 		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
 	}

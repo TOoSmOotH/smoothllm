@@ -151,6 +151,7 @@
                   <option value="anthropic_max">Claude Max (OAuth)</option>
                   <option value="vllm">vLLM</option>
                   <option value="local">Local / Custom</option>
+                  <option value="zai">z.ai (Zhipu)</option>
                 </select>
                 <p v-if="errors.provider_type" class="mt-1 text-xs text-error-500 font-medium">{{ errors.provider_type }}</p>
               </div>
@@ -343,6 +344,8 @@ const getBaseUrlHelperText = computed(() => {
       return 'Enter your vLLM server URL (e.g., http://localhost:8000)'
     case ProviderType.LOCAL:
       return 'Enter your local model endpoint URL'
+    case ProviderType.ZAI:
+      return 'Leave empty for default: https://api.z.ai/api/paas/v4/'
     default:
       return ''
   }
@@ -360,6 +363,8 @@ const getDefaultModelPlaceholder = computed(() => {
       return 'your-model-name'
     case ProviderType.LOCAL:
       return 'your-model-name'
+    case ProviderType.ZAI:
+      return 'GLM-4.7'
     default:
       return ''
   }
