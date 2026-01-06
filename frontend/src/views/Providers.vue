@@ -152,6 +152,7 @@
                   <option value="vllm">vLLM</option>
                   <option value="local">Local / Custom</option>
                   <option value="zai">z.ai (Zhipu)</option>
+                  <option value="zai_international">z.ai (International)</option>
                 </select>
                 <p v-if="errors.provider_type" class="mt-1 text-xs text-error-500 font-medium">{{ errors.provider_type }}</p>
               </div>
@@ -196,6 +197,14 @@
                   :error="errors.api_key"
                 />
               </div>
+
+               <Input
+                v-model="form.models"
+                label="Allowed Models (comma separated)"
+                placeholder="gpt-4o, gpt-3.5-turbo"
+                helper-text="Limit which models can be used with this key. Leave empty to allow all."
+                :error="errors.models"
+              />
 
               <Input
                 v-model="form.default_model"
@@ -317,6 +326,7 @@ const form = ref({
   provider_type: ProviderType.OPENAI as string,
   base_url: '',
   api_key: '',
+  models: '',
   default_model: '',
   input_cost_per_million: '',
   output_cost_per_million: '',
@@ -346,6 +356,8 @@ const getBaseUrlHelperText = computed(() => {
       return 'Enter your local model endpoint URL'
     case ProviderType.ZAI:
       return 'Leave empty for default: https://api.z.ai/api/paas/v4/'
+    case ProviderType.ZAI_INTERNATIONAL:
+      return 'Leave empty for default: https://api.z.ai/api/paas/v4/'
     default:
       return ''
   }
@@ -364,6 +376,8 @@ const getDefaultModelPlaceholder = computed(() => {
     case ProviderType.LOCAL:
       return 'your-model-name'
     case ProviderType.ZAI:
+      return 'GLM-4.7'
+    case ProviderType.ZAI_INTERNATIONAL:
       return 'GLM-4.7'
     default:
       return ''
@@ -384,6 +398,7 @@ const openEditModal = (provider: ProviderResponse) => {
     provider_type: provider.provider_type,
     base_url: provider.base_url || '',
     api_key: '',
+    models: provider.models ? provider.models.join(', ') : '',
     default_model: provider.default_model || '',
     input_cost_per_million: provider.input_cost_per_million.toString(),
     output_cost_per_million: provider.output_cost_per_million.toString(),
@@ -415,6 +430,7 @@ const resetForm = () => {
     provider_type: ProviderType.OPENAI,
     base_url: '',
     api_key: '',
+    models: '',
     default_model: '',
     input_cost_per_million: '',
     output_cost_per_million: '',
@@ -467,6 +483,10 @@ const handleSubmit = async () => {
 
     if (form.value.base_url.trim()) {
       payload.base_url = form.value.base_url.trim()
+    }
+    
+    if (form.value.models.trim()) {
+      payload.models = form.value.models.split(',').map(m => m.trim()).filter(m => m)
     }
 
     if (form.value.default_model.trim()) {

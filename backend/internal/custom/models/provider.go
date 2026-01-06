@@ -10,16 +10,17 @@ import (
 type Provider struct {
 	gorm.Model
 
-	UserID       uint   `gorm:"not null;index" json:"user_id"`
-	Name         string `gorm:"type:varchar(100);not null" json:"name"`
-	ProviderType string `gorm:"type:varchar(50);not null" json:"provider_type"` // openai, anthropic, anthropic_max, local
-	BaseURL      string `gorm:"type:varchar(500)" json:"base_url"`
-	APIKey       string `gorm:"type:varchar(500)" json:"-"` // Never expose in API responses (not required for OAuth providers)
+	UserID       uint     `gorm:"not null;index" json:"user_id"`
+	Name         string   `gorm:"type:varchar(100);not null" json:"name"`
+	ProviderType string   `gorm:"type:varchar(50);not null" json:"provider_type"` // openai, anthropic, anthropic_max, local
+	BaseURL      string   `gorm:"type:varchar(500)" json:"base_url"`
+	APIKey       string   `gorm:"type:varchar(500)" json:"-"` // Never expose in API responses (not required for OAuth providers)
+	Models       []string `gorm:"serializer:json" json:"models"`
 
 	// OAuth fields for Claude Max subscription
-	RefreshToken   string     `gorm:"type:varchar(500)" json:"-"`          // OAuth refresh token (never expose)
-	AccessToken    string     `gorm:"type:varchar(500)" json:"-"`          // OAuth access token (never expose)
-	TokenExpiresAt *time.Time `gorm:"column:token_expires_at" json:"-"`    // When access token expires
+	RefreshToken   string     `gorm:"type:varchar(500)" json:"-"`           // OAuth refresh token (never expose)
+	AccessToken    string     `gorm:"type:varchar(500)" json:"-"`           // OAuth access token (never expose)
+	TokenExpiresAt *time.Time `gorm:"column:token_expires_at" json:"-"`     // When access token expires
 	OAuthConnected bool       `gorm:"default:false" json:"oauth_connected"` // Whether OAuth is connected
 
 	IsActive             bool    `gorm:"default:true" json:"is_active"`
@@ -32,20 +33,22 @@ type Provider struct {
 
 // ProviderType constants for supported LLM providers
 const (
-	ProviderTypeOpenAI       = "openai"
-	ProviderTypeAnthropic    = "anthropic"
-	ProviderTypeAnthropicMax = "anthropic_max" // Claude Max subscription via OAuth
-	ProviderTypeVLLM         = "vllm"
-	ProviderTypeLocal        = "local"
-	ProviderTypeZai          = "zai"
+	ProviderTypeOpenAI           = "openai"
+	ProviderTypeAnthropic        = "anthropic"
+	ProviderTypeAnthropicMax     = "anthropic_max" // Claude Max subscription via OAuth
+	ProviderTypeVLLM             = "vllm"
+	ProviderTypeLocal            = "local"
+	ProviderTypeZai              = "zai"
+	ProviderTypeZaiInternational = "zai_international"
 )
 
 // DefaultBaseURLs for known providers
 var DefaultBaseURLs = map[string]string{
-	ProviderTypeOpenAI:       "https://api.openai.com",
-	ProviderTypeAnthropic:    "https://api.anthropic.com",
-	ProviderTypeAnthropicMax: "https://api.anthropic.com",
-	ProviderTypeZai:          "https://api.z.ai/api/paas/v4/",
+	ProviderTypeOpenAI:           "https://api.openai.com",
+	ProviderTypeAnthropic:        "https://api.anthropic.com",
+	ProviderTypeAnthropicMax:     "https://api.anthropic.com",
+	ProviderTypeZai:              "https://open.bigmodel.cn/api/paas/v4/",
+	ProviderTypeZaiInternational: "https://api.z.ai/api/paas/v4/",
 }
 
 // GetBaseURL returns the provider's base URL, falling back to default if empty

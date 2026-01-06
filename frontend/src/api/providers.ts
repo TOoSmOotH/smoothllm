@@ -8,6 +8,7 @@ export const ProviderType = {
   VLLM: 'vllm',
   LOCAL: 'local',
   ZAI: 'zai',
+  ZAI_INTERNATIONAL: 'zai_international',
 } as const
 
 export type ProviderTypeValue = (typeof ProviderType)[keyof typeof ProviderType]
@@ -19,6 +20,7 @@ export interface ProviderResponse {
   provider_type: ProviderTypeValue
   base_url: string
   is_active: boolean
+  models: string[]
   default_model: string
   input_cost_per_million: number
   output_cost_per_million: number
@@ -33,6 +35,7 @@ export interface CreateProviderRequest {
   base_url?: string
   api_key?: string // Optional for OAuth providers
   is_active?: boolean
+  models?: string[]
   default_model?: string
   input_cost_per_million?: number
   output_cost_per_million?: number
@@ -44,6 +47,7 @@ export interface UpdateProviderRequest {
   base_url?: string
   api_key?: string
   is_active?: boolean
+  models?: string[]
   default_model?: string
   input_cost_per_million?: number
   output_cost_per_million?: number

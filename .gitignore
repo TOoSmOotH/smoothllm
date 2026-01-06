@@ -53,6 +53,9 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Auto-claude
+# Claude / Auto-claude
+.claude/
 .auto-claude/
+.claude_settings.json
+.auto-claude-status
 .worktrees/

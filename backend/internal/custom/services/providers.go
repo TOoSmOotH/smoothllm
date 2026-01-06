@@ -38,6 +38,7 @@ type ProviderResponse struct {
 	ProviderType         string    `json:"provider_type"`
 	BaseURL              string    `json:"base_url"`
 	IsActive             bool      `json:"is_active"`
+	Models               []string  `json:"models"`
 	DefaultModel         string    `json:"default_model"`
 	InputCostPerMillion  float64   `json:"input_cost_per_million"`
 	OutputCostPerMillion float64   `json:"output_cost_per_million"`
@@ -48,14 +49,15 @@ type ProviderResponse struct {
 
 // CreateProviderRequest represents the request to create a provider
 type CreateProviderRequest struct {
-	Name                 string  `json:"name" binding:"required"`
-	ProviderType         string  `json:"provider_type" binding:"required"`
-	BaseURL              string  `json:"base_url"`
-	APIKey               string  `json:"api_key"` // Not required for OAuth providers (validated in validateCreateRequest)
-	IsActive             *bool   `json:"is_active"`
-	DefaultModel         string  `json:"default_model"`
-	InputCostPerMillion  float64 `json:"input_cost_per_million"`
-	OutputCostPerMillion float64 `json:"output_cost_per_million"`
+	Name                 string   `json:"name" binding:"required"`
+	ProviderType         string   `json:"provider_type" binding:"required"`
+	BaseURL              string   `json:"base_url"`
+	APIKey               string   `json:"api_key"` // Not required for OAuth providers (validated in validateCreateRequest)
+	IsActive             *bool    `json:"is_active"`
+	Models               []string `json:"models"`
+	DefaultModel         string   `json:"default_model"`
+	InputCostPerMillion  float64  `json:"input_cost_per_million"`
+	OutputCostPerMillion float64  `json:"output_cost_per_million"`
 }
 
 // UpdateProviderRequest represents the request to update a provider
@@ -65,6 +67,7 @@ type UpdateProviderRequest struct {
 	BaseURL              *string  `json:"base_url,omitempty"`
 	APIKey               *string  `json:"api_key,omitempty"`
 	IsActive             *bool    `json:"is_active,omitempty"`
+	Models               []string `json:"models,omitempty"`
 	DefaultModel         *string  `json:"default_model,omitempty"`
 	InputCostPerMillion  *float64 `json:"input_cost_per_million,omitempty"`
 	OutputCostPerMillion *float64 `json:"output_cost_per_million,omitempty"`
@@ -116,6 +119,7 @@ func (s *ProviderService) CreateProvider(userID uint, req *CreateProviderRequest
 		BaseURL:              req.BaseURL,
 		APIKey:               req.APIKey,
 		IsActive:             isActive,
+		Models:               req.Models,
 		DefaultModel:         req.DefaultModel,
 		InputCostPerMillion:  req.InputCostPerMillion,
 		OutputCostPerMillion: req.OutputCostPerMillion,
@@ -196,6 +200,9 @@ func (s *ProviderService) UpdateProvider(userID, providerID uint, req *UpdatePro
 	}
 	if req.IsActive != nil {
 		updates["is_active"] = *req.IsActive
+	}
+	if req.Models != nil {
+		updates["models"] = req.Models
 	}
 	if req.DefaultModel != nil {
 		updates["default_model"] = *req.DefaultModel
@@ -308,6 +315,7 @@ func (s *ProviderService) buildProviderResponse(provider *models.Provider) Provi
 		ProviderType:         provider.ProviderType,
 		BaseURL:              provider.GetBaseURL(),
 		IsActive:             provider.IsActive,
+		Models:               provider.Models,
 		DefaultModel:         provider.DefaultModel,
 		InputCostPerMillion:  provider.InputCostPerMillion,
 		OutputCostPerMillion: provider.OutputCostPerMillion,
@@ -409,6 +417,7 @@ func (s *ProviderService) validateProviderType(providerType string) error {
 		models.ProviderTypeVLLM,
 		models.ProviderTypeLocal,
 		models.ProviderTypeZai,
+		models.ProviderTypeZaiInternational,
 	}
 	for _, vt := range validTypes {
 		if providerType == vt {
@@ -462,6 +471,8 @@ func (s *ProviderService) testProviderConnection(provider *models.Provider) erro
 	case models.ProviderTypeLocal:
 		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
 	case models.ProviderTypeZai:
+		testURL = strings.TrimSuffix(baseURL, "/") + "/models"
+	case models.ProviderTypeZaiInternational:
 		testURL = strings.TrimSuffix(baseURL, "/") + "/models"
 	default:
 		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
