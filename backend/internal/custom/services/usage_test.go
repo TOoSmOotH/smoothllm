@@ -159,6 +159,38 @@ func TestUsageService_GetUsageSummary(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, int64(0), summary.TotalRequests)
 		assert.Equal(t, float64(0), summary.TotalCost)
+		assert.Equal(t, "", summary.PeriodStart)
+		assert.Equal(t, "", summary.PeriodEnd)
+	})
+
+	t.Run("all endpoints handle user with no usage", func(t *testing.T) {
+		db := setupUsageTestDB(t)
+		service := NewUsageService(db)
+		userID := uint(999)
+
+		summary, err := service.GetUsageSummary(userID, nil)
+		require.NoError(t, err)
+		assert.NotNil(t, summary)
+
+		daily, err := service.GetDailyUsage(userID, nil)
+		require.NoError(t, err)
+		assert.Empty(t, daily)
+
+		byKey, err := service.GetUsageByKey(userID, nil)
+		require.NoError(t, err)
+		assert.Empty(t, byKey)
+
+		byProvider, err := service.GetUsageByProvider(userID, nil)
+		require.NoError(t, err)
+		assert.Empty(t, byProvider)
+
+		byModel, err := service.GetUsageByModel(userID, nil)
+		require.NoError(t, err)
+		assert.Empty(t, byModel)
+
+		recent, err := service.GetRecentUsage(userID, nil)
+		require.NoError(t, err)
+		assert.Empty(t, recent)
 	})
 
 	t.Run("filters by date range", func(t *testing.T) {

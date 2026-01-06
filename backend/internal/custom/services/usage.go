@@ -35,12 +35,12 @@ type UsageSummaryResponse struct {
 
 // DailyUsageResponse represents usage data for a single day
 type DailyUsageResponse struct {
-	Date           string  `json:"date"`
-	Requests       int64   `json:"requests"`
-	InputTokens    int64   `json:"input_tokens"`
-	OutputTokens   int64   `json:"output_tokens"`
-	TotalTokens    int64   `json:"total_tokens"`
-	Cost           float64 `json:"cost"`
+	Date            string  `json:"date"`
+	Requests        int64   `json:"requests"`
+	InputTokens     int64   `json:"input_tokens"`
+	OutputTokens    int64   `json:"output_tokens"`
+	TotalTokens     int64   `json:"total_tokens"`
+	Cost            float64 `json:"cost"`
 	AverageDuration float64 `json:"average_duration_ms"`
 }
 
@@ -186,15 +186,15 @@ func (s *UsageService) GetUsageSummary(userID uint, params *UsageQueryParams) (*
 		TotalTokens        int64
 		TotalCost          float64
 		TotalDuration      int64
-		MinDate            time.Time
-		MaxDate            time.Time
+		MinDate            *time.Time
+		MaxDate            *time.Time
 	}
 
 	// Get aggregate stats
 	if err := query.Select(`
 		COUNT(*) as total_requests,
-		SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) as successful_requests,
-		SUM(CASE WHEN status_code >= 400 OR error_message != '' THEN 1 ELSE 0 END) as failed_requests,
+		COALESCE(SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END), 0) as successful_requests,
+		COALESCE(SUM(CASE WHEN status_code >= 400 OR error_message != '' THEN 1 ELSE 0 END), 0) as failed_requests,
 		COALESCE(SUM(input_tokens), 0) as total_input_tokens,
 		COALESCE(SUM(output_tokens), 0) as total_output_tokens,
 		COALESCE(SUM(total_tokens), 0) as total_tokens,
@@ -215,10 +215,10 @@ func (s *UsageService) GetUsageSummary(userID uint, params *UsageQueryParams) (*
 	// Format dates
 	periodStart := ""
 	periodEnd := ""
-	if !result.MinDate.IsZero() {
+	if result.MinDate != nil && !result.MinDate.IsZero() {
 		periodStart = result.MinDate.Format(time.RFC3339)
 	}
-	if !result.MaxDate.IsZero() {
+	if result.MaxDate != nil && !result.MaxDate.IsZero() {
 		periodEnd = result.MaxDate.Format(time.RFC3339)
 	}
 
@@ -305,15 +305,15 @@ func (s *UsageService) GetUsageByKey(userID uint, params *UsageQueryParams) ([]U
 
 	if err := query.Select(`
 		usage_records.proxy_key_id as key_id,
-		proxy_api_keys.key_prefix as key_prefix,
-		proxy_api_keys.name as key_name,
+		COALESCE(proxy_api_keys.key_prefix, '') as key_prefix,
+		COALESCE(proxy_api_keys.name, 'Deleted Key') as key_name,
 		COUNT(*) as requests,
 		COALESCE(SUM(usage_records.input_tokens), 0) as input_tokens,
 		COALESCE(SUM(usage_records.output_tokens), 0) as output_tokens,
 		COALESCE(SUM(usage_records.total_tokens), 0) as total_tokens,
 		COALESCE(SUM(usage_records.cost), 0) as cost,
 		COALESCE(SUM(usage_records.request_duration), 0) as total_duration
-	`).Group("usage_records.proxy_key_id").Order("requests DESC").Scan(&results).Error; err != nil {
+	`).Group("usage_records.proxy_key_id, proxy_api_keys.key_prefix, proxy_api_keys.name").Order("requests DESC").Scan(&results).Error; err != nil {
 		return nil, fmt.Errorf("failed to get usage by key: %w", err)
 	}
 
@@ -360,15 +360,15 @@ func (s *UsageService) GetUsageByProvider(userID uint, params *UsageQueryParams)
 
 	if err := query.Select(`
 		usage_records.provider_id as provider_id,
-		providers.name as provider_name,
-		providers.provider_type as provider_type,
+		COALESCE(providers.name, 'Deleted Provider') as provider_name,
+		COALESCE(providers.provider_type, 'unknown') as provider_type,
 		COUNT(*) as requests,
 		COALESCE(SUM(usage_records.input_tokens), 0) as input_tokens,
 		COALESCE(SUM(usage_records.output_tokens), 0) as output_tokens,
 		COALESCE(SUM(usage_records.total_tokens), 0) as total_tokens,
 		COALESCE(SUM(usage_records.cost), 0) as cost,
 		COALESCE(SUM(usage_records.request_duration), 0) as total_duration
-	`).Group("usage_records.provider_id").Order("requests DESC").Scan(&results).Error; err != nil {
+	`).Group("usage_records.provider_id, providers.name, providers.provider_type").Order("requests DESC").Scan(&results).Error; err != nil {
 		return nil, fmt.Errorf("failed to get usage by provider: %w", err)
 	}
 
