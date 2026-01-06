@@ -263,18 +263,51 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 	var targetURL string
 	var requestBody []byte
 
+	baseURL := strings.TrimSuffix(provider.GetBaseURL(), "/")
+
 	switch provider.ProviderType {
 	case models.ProviderTypeAnthropic, models.ProviderTypeAnthropicMax:
-		targetURL = strings.TrimSuffix(provider.GetBaseURL(), "/") + "/v1/messages"
+		// Anthropic-specific endpoint and transformation
+		if !strings.HasSuffix(baseURL, "/v1") {
+			targetURL = baseURL + "/v1/messages"
+		} else {
+			targetURL = baseURL + "/messages"
+		}
 		requestBody, err = s.transformToAnthropic(&chatReq, modelInfo.ModelName)
 		if err != nil {
 			result.StatusCode = http.StatusBadRequest
 			result.ErrorMessage = fmt.Sprintf("failed to transform request: %v", err)
 			return result, err
 		}
+	case models.ProviderTypeZai, models.ProviderTypeZaiInternational:
+		// ZhipuAI (ZAI) specific OpenAI-compatible endpoint
+		// They usually use /at/completions directly on the v4 base
+		if strings.HasSuffix(baseURL, "/v4") {
+			targetURL = baseURL + "/chat/completions"
+		} else {
+			// If v4 is not there, it might be an older API or a different base
+			targetURL = baseURL + "/v4/chat/completions"
+		}
+		// Update the model name in the request
+		chatReq.Model = modelInfo.ModelName
+		requestBody, err = json.Marshal(chatReq)
+		if err != nil {
+			result.StatusCode = http.StatusInternalServerError
+			result.ErrorMessage = "failed to marshal request"
+			return result, fmt.Errorf("failed to marshal request: %w", err)
+		}
 	default:
-		// OpenAI and local providers use the same format
-		targetURL = strings.TrimSuffix(provider.GetBaseURL(), "/") + "/v1/chat/completions"
+		// OpenAI and other standard OpenAI-compatible providers (Ollama, vLLM, etc.)
+		// Be smart about the /v1 prefix
+		if strings.HasSuffix(baseURL, "/v1") {
+			targetURL = baseURL + "/chat/completions"
+		} else if strings.Contains(baseURL, "api.openai.com") {
+			targetURL = baseURL + "/v1/chat/completions"
+		} else {
+			// For local/generic providers, try with /v1 but allow it to be in baseURL
+			targetURL = baseURL + "/v1/chat/completions"
+		}
+
 		// Update the model name in the request if it was prefixed
 		chatReq.Model = modelInfo.ModelName
 		requestBody, err = json.Marshal(chatReq)

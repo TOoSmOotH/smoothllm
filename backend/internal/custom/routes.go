@@ -114,6 +114,9 @@ func RegisterProxyRoutes(router *gin.Engine, deps Dependencies) {
 		// OpenAI-compatible chat completions endpoint
 		v1Proxy.POST("/chat/completions", proxyHandler.ChatCompletions)
 
+		// OpenAI-compatible completions endpoint (legacy)
+		v1Proxy.POST("/completions", proxyHandler.ChatCompletions)
+
 		// OpenAI-compatible models list endpoint
 		v1Proxy.GET("/models", proxyHandler.ListModels)
 
