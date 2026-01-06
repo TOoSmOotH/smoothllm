@@ -10,18 +10,17 @@ import (
 type ProxyAPIKey struct {
 	gorm.Model
 
-	UserID     uint   `gorm:"not null;index" json:"user_id"`
-	ProviderID uint   `gorm:"not null;index" json:"provider_id"`
-	KeyHash    string `gorm:"type:varchar(255);uniqueIndex;not null" json:"-"` // Never expose hash
-	KeyPrefix  string `gorm:"type:varchar(20);not null" json:"key_prefix"`     // sk-smoothllm-xxx (visible part)
-	Name       string `gorm:"type:varchar(100)" json:"name"`
-	IsActive   bool   `gorm:"default:true" json:"is_active"`
+	UserID    uint   `gorm:"not null;index" json:"user_id"`
+	KeyHash   string `gorm:"type:varchar(255);uniqueIndex;not null" json:"-"` // Never expose hash
+	KeyPrefix string `gorm:"type:varchar(20);not null" json:"key_prefix"`     // sk-smoothllm-xxx (visible part)
+	Name      string `gorm:"type:varchar(100)" json:"name"`
+	IsActive  bool   `gorm:"default:true" json:"is_active"`
 
 	LastUsedAt *time.Time `json:"last_used_at"`
 	ExpiresAt  *time.Time `json:"expires_at"`
 
 	// Relationships
-	Provider *Provider `gorm:"foreignKey:ProviderID;constraint:OnDelete:CASCADE" json:"provider,omitempty"`
+	AllowedProviders []KeyAllowedProvider `gorm:"foreignKey:ProxyAPIKeyID;constraint:OnDelete:CASCADE" json:"allowed_providers"`
 
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }

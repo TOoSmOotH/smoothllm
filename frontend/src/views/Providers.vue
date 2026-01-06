@@ -198,15 +198,68 @@
                 />
               </div>
 
-               <Input
-                v-model="form.models"
-                label="Allowed Models (comma separated)"
-                placeholder="gpt-4o, gpt-3.5-turbo"
-                helper-text="Limit which models can be used with this key. Leave empty to allow all."
-                :error="errors.models"
-              />
+              <!-- Model Selection -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="block text-sm font-medium text-text-secondary">Allowed Models</label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    @click="fetchModels"
+                    :loading="fetchingModels"
+                    type="button"
+                  >
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Fetch from Provider
+                  </Button>
+                </div>
 
-              <Input
+                <div v-if="availableModels.length > 0" class="bg-bg-secondary border border-border-subtle rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                  <div v-for="model in availableModels" :key="model" class="flex items-center gap-3">
+                    <input
+                      :id="`model-${model}`"
+                      :value="model"
+                      v-model="form.models"
+                      type="checkbox"
+                      class="w-4 h-4 rounded border-border-default text-primary-500 focus:ring-primary-500"
+                    />
+                    <label :for="`model-${model}`" class="text-sm text-text-primary font-mono cursor-pointer">{{ model }}</label>
+                  </div>
+                </div>
+                <div v-else-if="form.models.length > 0" class="bg-bg-secondary border border-border-subtle rounded-md p-4 space-y-2">
+                   <div v-for="model in form.models" :key="model" class="flex items-center gap-3">
+                    <input
+                      :id="`model-existing-${model}`"
+                      :value="model"
+                      v-model="form.models"
+                      type="checkbox"
+                      class="w-4 h-4 rounded border-border-default text-primary-500 focus:ring-primary-500"
+                    />
+                    <label :for="`model-existing-${model}`" class="text-sm text-text-primary font-mono cursor-pointer">{{ model }}</label>
+                  </div>
+                </div>
+                <div v-else class="bg-bg-secondary border border-border-dashed border-border-default rounded-md p-8 text-center">
+                  <p class="text-xs text-text-muted">No models selected. Click "Fetch from Provider" to see available models or manually add them if needed.</p>
+                </div>
+                
+                <!-- Manual entry for when fetch fails or for custom models -->
+                <div class="flex gap-2">
+                   <Input
+                    v-model="manualModel"
+                    placeholder="Manually add model ID"
+                    class="flex-1"
+                    @keyup.enter="addManualModel"
+                  />
+                  <Button variant="outline" size="sm" @click="addManualModel" type="button" class="mt-1">Add</Button>
+                </div>
+
+                <p v-if="errors.models" class="text-xs text-error-500 font-medium">{{ errors.models }}</p>
+                <p class="text-xs text-text-tertiary">Limit which models can be used with this key. Leave empty to allow all.</p>
+              </div>
+
+               <Input
                 v-model="form.default_model"
                 label="Default Model"
                 :placeholder="getDefaultModelPlaceholder"
@@ -326,12 +379,16 @@ const form = ref({
   provider_type: ProviderType.OPENAI as string,
   base_url: '',
   api_key: '',
-  models: '',
+  models: [] as string[],
   default_model: '',
   input_cost_per_million: '',
   output_cost_per_million: '',
   is_active: true,
 })
+
+const manualModel = ref('')
+const availableModels = ref<string[]>([])
+const fetchingModels = ref(false)
 
 const errors = ref<Record<string, string>>({})
 
@@ -398,12 +455,13 @@ const openEditModal = (provider: ProviderResponse) => {
     provider_type: provider.provider_type,
     base_url: provider.base_url || '',
     api_key: '',
-    models: provider.models ? provider.models.join(', ') : '',
+    models: provider.models || [],
     default_model: provider.default_model || '',
     input_cost_per_million: provider.input_cost_per_million.toString(),
     output_cost_per_million: provider.output_cost_per_million.toString(),
     is_active: provider.is_active,
   }
+  availableModels.value = []
   errors.value = {}
   showModal.value = true
 }
@@ -430,13 +488,70 @@ const resetForm = () => {
     provider_type: ProviderType.OPENAI,
     base_url: '',
     api_key: '',
-    models: '',
+    models: [],
     default_model: '',
     input_cost_per_million: '',
     output_cost_per_million: '',
     is_active: true,
   }
+  availableModels.value = []
+  manualModel.value = ''
   errors.value = {}
+}
+
+const addManualModel = () => {
+  const model = manualModel.value.trim()
+  if (model && !form.value.models.includes(model)) {
+    form.value.models.push(model)
+  }
+  manualModel.value = ''
+}
+
+const fetchModels = async () => {
+  if (form.value.provider_type === ProviderType.ANTHROPIC_MAX && !editingProvider.value) {
+    toast.info('OAuth providers require connecting via OAuth first')
+    return
+  }
+
+  if (!form.value.api_key.trim() && !editingProvider.value) {
+    toast.error('API key is required to fetch models')
+    return
+  }
+
+  fetchingModels.value = true
+
+  try {
+    let models: string[] = []
+    if (editingProvider.value) {
+      models = await providersStore.fetchAvailableModels(editingProvider.value.id)
+    } else {
+      const payload: CreateProviderRequest = {
+        name: form.value.name.trim() || 'Temp',
+        provider_type: form.value.provider_type as CreateProviderRequest['provider_type'],
+        api_key: form.value.api_key,
+      }
+      if (form.value.base_url.trim()) {
+        payload.base_url = form.value.base_url.trim()
+      }
+      models = await providersStore.fetchAvailableModelsWithCredentials(payload)
+    }
+    
+    availableModels.value = models
+    if (models.length === 0) {
+      toast.info('No models returned by provider')
+    } else {
+      toast.success(`Fetched ${models.length} models`)
+      // Automatically select all if none are selected
+      if (form.value.models.length === 0) {
+        form.value.models = [...models]
+      }
+    }
+  } catch (err: unknown) {
+    const error = err as { response?: { data?: { error?: string } } }
+    toast.error(error.response?.data?.error || 'Failed to fetch models')
+  } finally {
+    fetchingModels.value = false
+  }
 }
 
 // Validation
@@ -485,8 +600,8 @@ const handleSubmit = async () => {
       payload.base_url = form.value.base_url.trim()
     }
     
-    if (form.value.models.trim()) {
-      payload.models = form.value.models.split(',').map(m => m.trim()).filter(m => m)
+    if (form.value.models.length > 0) {
+      payload.models = form.value.models
     }
 
     if (form.value.default_model.trim()) {
@@ -592,58 +707,6 @@ const testConnectionWithForm = async () => {
 }
 
 // OAuth functions
-const connectingOAuthId = ref<number | null>(null)
-const disconnectingOAuthId = ref<number | null>(null)
-
-const connectOAuth = async (providerId: number) => {
-  connectingOAuthId.value = providerId
-
-  try {
-    const { authorization_url } = await providersApi.getOAuthAuthorizeUrl(providerId)
-    // Open OAuth in a new popup window
-    const width = 600
-    const height = 700
-    const left = window.screenX + (window.outerWidth - width) / 2
-    const top = window.screenY + (window.outerHeight - height) / 2
-    const popup = window.open(
-      authorization_url,
-      'oauth_popup',
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
-    )
-
-    // Poll for popup closure and refresh providers
-    if (popup) {
-      const pollTimer = setInterval(async () => {
-        if (popup.closed) {
-          clearInterval(pollTimer)
-          connectingOAuthId.value = null
-          // Refresh providers to check if OAuth was connected
-          await providersStore.fetchProviders()
-        }
-      }, 500)
-    }
-  } catch (err: unknown) {
-    const error = err as { response?: { data?: { error?: string } } }
-    toast.error(error.response?.data?.error || 'Failed to start OAuth flow')
-    connectingOAuthId.value = null
-  }
-}
-
-const disconnectOAuth = async (providerId: number) => {
-  disconnectingOAuthId.value = providerId
-
-  try {
-    await providersApi.disconnectOAuth(providerId)
-    toast.success('OAuth disconnected successfully')
-    await providersStore.fetchProviders() // Refresh providers list
-  } catch (err: unknown) {
-    const error = err as { response?: { data?: { error?: string } } }
-    toast.error(error.response?.data?.error || 'Failed to disconnect OAuth')
-  } finally {
-    disconnectingOAuthId.value = null
-  }
-}
-
 const testOAuthConnection = async (providerId: number) => {
   testingId.value = providerId
 

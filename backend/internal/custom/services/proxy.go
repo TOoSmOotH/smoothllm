@@ -71,16 +71,16 @@ type OpenAIMessage struct {
 
 // AnthropicRequest represents an Anthropic API request
 type AnthropicRequest struct {
-	Model       string             `json:"model"`
-	Messages    []AnthropicMessage `json:"messages"`
-	MaxTokens   int                `json:"max_tokens"`
-	System      string             `json:"system,omitempty"`
-	Temperature *float64           `json:"temperature,omitempty"`
-	TopP        *float64           `json:"top_p,omitempty"`
-	TopK        *int               `json:"top_k,omitempty"`
-	Stream      *bool              `json:"stream,omitempty"`
-	StopSequences []string         `json:"stop_sequences,omitempty"`
-	Metadata    map[string]string  `json:"metadata,omitempty"`
+	Model         string             `json:"model"`
+	Messages      []AnthropicMessage `json:"messages"`
+	MaxTokens     int                `json:"max_tokens"`
+	System        string             `json:"system,omitempty"`
+	Temperature   *float64           `json:"temperature,omitempty"`
+	TopP          *float64           `json:"top_p,omitempty"`
+	TopK          *int               `json:"top_k,omitempty"`
+	Stream        *bool              `json:"stream,omitempty"`
+	StopSequences []string           `json:"stop_sequences,omitempty"`
+	Metadata      map[string]string  `json:"metadata,omitempty"`
 }
 
 // AnthropicMessage represents a message in the Anthropic format
@@ -114,26 +114,75 @@ type ProxyResult struct {
 	Model           string
 }
 
-// ValidateAndGetProvider validates the API key and returns the associated provider
+// ValidateKey validates the API key and returns the associated key record
+func (s *ProxyService) ValidateKey(apiKey string) (*models.ProxyAPIKey, error) {
+	return s.keyService.ValidateKey(apiKey)
+}
+
+// GetProviderForModel finds the appropriate provider for a given model and proxy key
+func (s *ProxyService) GetProviderForModel(proxyKey *models.ProxyAPIKey, modelName string) (*models.Provider, error) {
+	// Parse the model name to handle provider prefixes (e.g., "openai/gpt-4o")
+	// For selection logic, we don't have a default provider type yet, so we pass empty
+	modelInfo := s.ParseModelName(modelName, "")
+
+	for _, ap := range proxyKey.AllowedProviders {
+		// 1. Check if model name matches (considering allowed models list)
+		isAllowed := false
+		if len(ap.Models) == 0 {
+			// If no models are specified, all provider's models are allowed
+			isAllowed = true
+		} else {
+			for _, m := range ap.Models {
+				if m == modelInfo.ModelName || m == modelName {
+					isAllowed = true
+					break
+				}
+			}
+		}
+
+		if !isAllowed {
+			continue
+		}
+
+		// 2. If provider prefix exists, verify it matches this provider
+		if modelInfo.ProviderType != "" {
+			if !strings.EqualFold(modelInfo.ProviderType, ap.Provider.ProviderType) &&
+				!strings.EqualFold(modelInfo.ProviderType, ap.Provider.Name) {
+				continue
+			}
+		}
+
+		// 3. Verify provider is active
+		if !ap.Provider.IsActive {
+			continue
+		}
+
+		return ap.Provider, nil
+	}
+
+	return nil, fmt.Errorf("no allowed provider found for model: %s", modelName)
+}
+
+// ValidateAndGetProvider validated the key and finds a provider.
+// Deprecated: Use ValidateKey and GetProviderForModel instead.
+// For backward compatibility, this returns the first active provider.
 func (s *ProxyService) ValidateAndGetProvider(apiKey string) (*models.ProxyAPIKey, *models.Provider, error) {
-	// Validate the proxy API key
-	proxyKey, err := s.keyService.ValidateKey(apiKey)
+	proxyKey, err := s.ValidateKey(apiKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid API key: %w", err)
+		return nil, nil, err
 	}
 
-	// Get the associated provider
-	provider, err := s.providerService.GetProviderByIDInternal(proxyKey.ProviderID)
-	if err != nil {
-		return nil, nil, fmt.Errorf("provider not found: %w", err)
+	if len(proxyKey.AllowedProviders) == 0 {
+		return nil, nil, fmt.Errorf("no providers associated with this API key")
 	}
 
-	// Check if provider is active
-	if !provider.IsActive {
-		return nil, nil, fmt.Errorf("provider is not active")
+	for _, ap := range proxyKey.AllowedProviders {
+		if ap.Provider != nil && ap.Provider.IsActive {
+			return proxyKey, ap.Provider, nil
+		}
 	}
 
-	return proxyKey, provider, nil
+	return nil, nil, fmt.Errorf("no active providers found for this API key")
 }
 
 // ParseModelName parses a LiteLLM-style model name (provider/model) into components
@@ -155,28 +204,11 @@ func (s *ProxyService) ParseModelName(model string, defaultProviderType string) 
 	return info
 }
 
-// ProxyRequest handles the proxying of an LLM request to the appropriate provider
-func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey, provider *models.Provider) (*ProxyResult, error) {
+func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey) (*ProxyResult, error) {
 	startTime := time.Now()
 	result := &ProxyResult{}
 
-	// For OAuth providers, ensure we have a valid access token
-	if provider.IsOAuthProvider() {
-		if !provider.OAuthConnected {
-			result.StatusCode = http.StatusUnauthorized
-			result.ErrorMessage = "OAuth not connected for this provider"
-			return result, fmt.Errorf("OAuth not connected for this provider")
-		}
-		if s.oauthService != nil {
-			if err := s.oauthService.EnsureValidToken(provider); err != nil {
-				result.StatusCode = http.StatusUnauthorized
-				result.ErrorMessage = "failed to refresh OAuth token"
-				return result, fmt.Errorf("failed to refresh OAuth token: %w", err)
-			}
-		}
-	}
-
-	// Read the request body
+	// Read the request body (needed to get the model)
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		result.StatusCode = http.StatusBadRequest
@@ -192,8 +224,17 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 		return result, fmt.Errorf("failed to parse request body: %w", err)
 	}
 
-	// Store the model for usage tracking
 	result.Model = chatReq.Model
+
+	// Determine which provider to use
+	provider, err := s.GetProviderForModel(proxyKey, chatReq.Model)
+	if err != nil {
+		result.StatusCode = http.StatusForbidden
+		result.ErrorMessage = err.Error()
+		return result, err
+	}
+
+	// For OAuth providers, ensure we have a valid access token
 
 	// Parse the model name
 	modelInfo := s.ParseModelName(chatReq.Model, provider.ProviderType)
@@ -279,34 +320,9 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 	return result, nil
 }
 
-// ProxyAnthropicPassthrough handles Anthropic-format requests and passes them through to the provider
-// This allows Claude Code and other Anthropic-native tools to use the proxy for usage tracking
-func (s *ProxyService) ProxyAnthropicPassthrough(c *gin.Context, proxyKey *models.ProxyAPIKey, provider *models.Provider) (*ProxyResult, error) {
+func (s *ProxyService) ProxyAnthropicPassthrough(c *gin.Context, proxyKey *models.ProxyAPIKey) (*ProxyResult, error) {
 	startTime := time.Now()
 	result := &ProxyResult{}
-
-	// Verify provider supports Anthropic format
-	if provider.ProviderType != models.ProviderTypeAnthropic && provider.ProviderType != models.ProviderTypeAnthropicMax {
-		result.StatusCode = http.StatusBadRequest
-		result.ErrorMessage = "provider does not support Anthropic API format"
-		return result, fmt.Errorf("provider type %s does not support Anthropic API format", provider.ProviderType)
-	}
-
-	// For OAuth providers, ensure we have a valid access token
-	if provider.IsOAuthProvider() {
-		if !provider.OAuthConnected {
-			result.StatusCode = http.StatusUnauthorized
-			result.ErrorMessage = "OAuth not connected for this provider"
-			return result, fmt.Errorf("OAuth not connected for this provider")
-		}
-		if s.oauthService != nil {
-			if err := s.oauthService.EnsureValidToken(provider); err != nil {
-				result.StatusCode = http.StatusUnauthorized
-				result.ErrorMessage = "failed to refresh OAuth token"
-				return result, fmt.Errorf("failed to refresh OAuth token: %w", err)
-			}
-		}
-	}
 
 	// Read the request body
 	bodyBytes, err := io.ReadAll(c.Request.Body)
@@ -316,11 +332,24 @@ func (s *ProxyService) ProxyAnthropicPassthrough(c *gin.Context, proxyKey *model
 		return result, fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	// Parse just enough to get the model for tracking
+	// Parse just enough to get the model for routing
 	var anthropicReq AnthropicPassthroughRequest
-	if err := json.Unmarshal(bodyBytes, &anthropicReq); err == nil {
-		result.Model = anthropicReq.Model
+	if err := json.Unmarshal(bodyBytes, &anthropicReq); err != nil {
+		result.StatusCode = http.StatusBadRequest
+		result.ErrorMessage = "invalid request body"
+		return result, fmt.Errorf("failed to parse request body: %w", err)
 	}
+	result.Model = anthropicReq.Model
+
+	// Determine which provider to use
+	provider, err := s.GetProviderForModel(proxyKey, result.Model)
+	if err != nil {
+		result.StatusCode = http.StatusForbidden
+		result.ErrorMessage = err.Error()
+		return result, err
+	}
+
+	// Verify provider supports Anthropic format
 
 	// Build the target URL
 	baseURL := provider.GetBaseURL()
@@ -626,6 +655,65 @@ func (s *ProxyService) extractAnthropicUsage(body []byte, result *ProxyResult) {
 	}
 }
 
+// ListModelsForKey returns a list of available models based on all allowed providers for a key
+func (s *ProxyService) ListModelsForKey(proxyKey *models.ProxyAPIKey) (interface{}, error) {
+	type Model struct {
+		ID      string `json:"id"`
+		Object  string `json:"object"`
+		Created int64  `json:"created"`
+		OwnedBy string `json:"owned_by"`
+	}
+
+	type ModelsResponse struct {
+		Object string  `json:"object"`
+		Data   []Model `json:"data"`
+	}
+
+	modelList := []Model{}
+	now := time.Now().Unix()
+	seenModels := make(map[string]bool)
+
+	for _, ap := range proxyKey.AllowedProviders {
+		if ap.Provider == nil || !ap.Provider.IsActive {
+			continue
+		}
+
+		// If the key has explicit allowed models for this provider, use them
+		if len(ap.Models) > 0 {
+			for _, m := range ap.Models {
+				// Format: provider/model or name/model
+				id := strings.ToLower(ap.Provider.ProviderType) + "/" + m
+				if !seenModels[id] {
+					modelList = append(modelList, Model{
+						ID:      id,
+						Object:  "model",
+						Created: now,
+						OwnedBy: ap.Provider.ProviderType,
+					})
+					seenModels[id] = true
+				}
+			}
+			continue
+		}
+
+		// Otherwise, use the models supported by the provider itself
+		providerModels, _ := s.ListModels(ap.Provider)
+		if resp, ok := providerModels.(ModelsResponse); ok {
+			for _, m := range resp.Data {
+				if !seenModels[m.ID] {
+					modelList = append(modelList, m)
+					seenModels[m.ID] = true
+				}
+			}
+		}
+	}
+
+	return ModelsResponse{
+		Object: "list",
+		Data:   modelList,
+	}, nil
+}
+
 // ListModels returns a list of available models from the proxy key's provider
 func (s *ProxyService) ListModels(provider *models.Provider) (interface{}, error) {
 	// Build list of available models based on provider type
@@ -769,16 +857,16 @@ func (s *ProxyService) recordUsage(proxyKey *models.ProxyAPIKey, provider *model
 	}
 
 	req := &RecordUsageRequest{
-		UserID:          proxyKey.UserID,
-		ProxyKeyID:      proxyKey.ID,
-		ProviderID:      provider.ID,
-		Model:           result.Model,
-		InputTokens:     result.InputTokens,
-		OutputTokens:    result.OutputTokens,
-		TotalTokens:     result.TotalTokens,
-		RequestDuration: int(result.RequestDuration.Milliseconds()),
-		StatusCode:      result.StatusCode,
-		ErrorMessage:    result.ErrorMessage,
+		UserID:               proxyKey.UserID,
+		ProxyKeyID:           proxyKey.ID,
+		ProviderID:           provider.ID,
+		Model:                result.Model,
+		InputTokens:          result.InputTokens,
+		OutputTokens:         result.OutputTokens,
+		TotalTokens:          result.TotalTokens,
+		RequestDuration:      int(result.RequestDuration.Milliseconds()),
+		StatusCode:           result.StatusCode,
+		ErrorMessage:         result.ErrorMessage,
 		InputCostPerMillion:  provider.InputCostPerMillion,
 		OutputCostPerMillion: provider.OutputCostPerMillion,
 	}

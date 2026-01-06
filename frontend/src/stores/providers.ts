@@ -168,6 +168,36 @@ export const useProvidersStore = defineStore('providers', () => {
     }
   }
 
+  const fetchAvailableModels = async (id: number): Promise<string[]> => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await providersApi.fetchAvailableModels(id)
+      return response.models
+    } catch (err: any) {
+      error.value = err.response?.data?.error || 'Failed to fetch available models'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const fetchAvailableModelsWithCredentials = async (payload: CreateProviderRequest): Promise<string[]> => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await providersApi.fetchAvailableModelsWithCredentials(payload)
+      return response.models
+    } catch (err: any) {
+      error.value = err.response?.data?.error || 'Failed to fetch available models'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const selectProvider = (provider: ProviderResponse | null) => {
     selectedProvider.value = provider
   }
@@ -208,6 +238,8 @@ export const useProvidersStore = defineStore('providers', () => {
     deleteProvider,
     testConnection,
     testConnectionWithCredentials,
+    fetchAvailableModels,
+    fetchAvailableModelsWithCredentials,
     selectProvider,
     clearError,
     reset,

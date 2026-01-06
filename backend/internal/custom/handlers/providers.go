@@ -178,3 +178,49 @@ func (h *ProviderHandler) TestConnectionWithCredentials(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "connection successful"})
 }
+
+// FetchModels handles GET /providers/:id/available-models - fetches models from provider
+func (h *ProviderHandler) FetchModels(c *gin.Context) {
+	userID := auth.GetUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	providerID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid provider id"})
+		return
+	}
+
+	models, err := h.providerService.FetchAvailableModels(userID, uint(providerID))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"models": models})
+}
+
+// FetchModelsWithCredentials handles POST /providers/fetch-models - fetches models with provided credentials (before saving)
+func (h *ProviderHandler) FetchModelsWithCredentials(c *gin.Context) {
+	userID := auth.GetUserID(c)
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var req services.CreateProviderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	models, err := h.providerService.FetchAvailableModelsWithRequest(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"models": models})
+}

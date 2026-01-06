@@ -17,7 +17,7 @@ func setupUsageTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
-	err = db.AutoMigrate(&models.Provider{}, &models.ProxyAPIKey{}, &models.UsageRecord{})
+	err = db.AutoMigrate(&models.Provider{}, &models.ProxyAPIKey{}, &models.UsageRecord{}, &models.KeyAllowedProvider{})
 	require.NoError(t, err)
 
 	return db
@@ -38,12 +38,11 @@ func createUsageTestData(t *testing.T, db *gorm.DB) (*models.Provider, *models.P
 	require.NoError(t, err)
 
 	key := &models.ProxyAPIKey{
-		UserID:     1,
-		ProviderID: provider.ID,
-		KeyHash:    "test-hash",
-		KeyPrefix:  "sk-smoothllm-test...",
-		Name:       "Test Key",
-		IsActive:   true,
+		UserID:    1,
+		KeyHash:   "test-hash",
+		KeyPrefix: "sk-smoothllm-test...",
+		Name:      "Test Key",
+		IsActive:  true,
 	}
 	err = db.Create(key).Error
 	require.NoError(t, err)
@@ -226,12 +225,11 @@ func TestUsageService_GetUsageByKey(t *testing.T) {
 
 		// Create second key
 		key2 := &models.ProxyAPIKey{
-			UserID:     1,
-			ProviderID: provider.ID,
-			KeyHash:    "test-hash-2",
-			KeyPrefix:  "sk-smoothllm-test2...",
-			Name:       "Test Key 2",
-			IsActive:   true,
+			UserID:    1,
+			KeyHash:   "test-hash-2",
+			KeyPrefix: "sk-smoothllm-test2...",
+			Name:      "Test Key 2",
+			IsActive:  true,
 		}
 		err := db.Create(key2).Error
 		require.NoError(t, err)
@@ -294,12 +292,11 @@ func TestUsageService_GetUsageByProvider(t *testing.T) {
 		require.NoError(t, err)
 
 		key2 := &models.ProxyAPIKey{
-			UserID:     1,
-			ProviderID: provider2.ID,
-			KeyHash:    "test-hash-2",
-			KeyPrefix:  "sk-smoothllm-test2...",
-			Name:       "Test Key 2",
-			IsActive:   true,
+			UserID:    1,
+			KeyHash:   "test-hash-2",
+			KeyPrefix: "sk-smoothllm-test2...",
+			Name:      "Test Key 2",
+			IsActive:  true,
 		}
 		err = db.Create(key2).Error
 		require.NoError(t, err)
@@ -594,11 +591,10 @@ func TestUsageQueryParams_Filtering(t *testing.T) {
 		require.NoError(t, err)
 
 		key2 := &models.ProxyAPIKey{
-			UserID:     1,
-			ProviderID: provider2.ID,
-			KeyHash:    "hash-2",
-			KeyPrefix:  "sk-test...",
-			IsActive:   true,
+			UserID:    1,
+			KeyHash:   "hash-2",
+			KeyPrefix: "sk-test...",
+			IsActive:  true,
 		}
 		err = db.Create(key2).Error
 		require.NoError(t, err)
@@ -636,11 +632,10 @@ func TestUsageQueryParams_Filtering(t *testing.T) {
 
 		// Create second key
 		key2 := &models.ProxyAPIKey{
-			UserID:     1,
-			ProviderID: provider.ID,
-			KeyHash:    "hash-2",
-			KeyPrefix:  "sk-test...",
-			IsActive:   true,
+			UserID:    1,
+			KeyHash:   "hash-2",
+			KeyPrefix: "sk-test...",
+			IsActive:  true,
 		}
 		err := db.Create(key2).Error
 		require.NoError(t, err)

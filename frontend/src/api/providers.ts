@@ -113,4 +113,14 @@ export const providersApi = {
     const response = await apiClient.post(`/oauth/anthropic/test/${providerId}`)
     return response.data
   },
+
+  async fetchAvailableModels(id: number): Promise<{ models: string[] }> {
+    const response = await apiClient.get(`/providers/${id}/available-models`)
+    return response.data
+  },
+
+  async fetchAvailableModelsWithCredentials(payload: CreateProviderRequest): Promise<{ models: string[] }> {
+    const response = await apiClient.post('/providers/fetch-models', payload)
+    return response.data
+  },
 }

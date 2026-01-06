@@ -35,8 +35,8 @@ func (h *ProxyHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
-	// Validate the key and get the associated provider
-	proxyKey, provider, err := h.proxyService.ValidateAndGetProvider(apiKey)
+	// Validate the key
+	proxyKey, err := h.proxyService.ValidateKey(apiKey)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": gin.H{
@@ -49,7 +49,7 @@ func (h *ProxyHandler) ChatCompletions(c *gin.Context) {
 	}
 
 	// Proxy the request to the provider
-	result, err := h.proxyService.ProxyRequest(c, proxyKey, provider)
+	result, err := h.proxyService.ProxyRequest(c, proxyKey)
 	if err != nil {
 		// If ProxyRequest already wrote to the response (via c.Data), don't write again
 		if c.Writer.Written() {
@@ -92,8 +92,8 @@ func (h *ProxyHandler) ListModels(c *gin.Context) {
 		return
 	}
 
-	// Validate the key and get the associated provider
-	_, provider, err := h.proxyService.ValidateAndGetProvider(apiKey)
+	// Validate the key
+	proxyKey, err := h.proxyService.ValidateKey(apiKey)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": gin.H{
@@ -105,8 +105,8 @@ func (h *ProxyHandler) ListModels(c *gin.Context) {
 		return
 	}
 
-	// Get the list of available models for this provider
-	models, err := h.proxyService.ListModels(provider)
+	// Get the list of available models for this key
+	models, err := h.proxyService.ListModelsForKey(proxyKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
@@ -136,8 +136,8 @@ func (h *ProxyHandler) Messages(c *gin.Context) {
 		return
 	}
 
-	// Validate the key and get the associated provider
-	proxyKey, provider, err := h.proxyService.ValidateAndGetProvider(apiKey)
+	// Validate the key
+	proxyKey, err := h.proxyService.ValidateKey(apiKey)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": gin.H{
@@ -149,7 +149,7 @@ func (h *ProxyHandler) Messages(c *gin.Context) {
 	}
 
 	// Proxy the request to Anthropic
-	result, err := h.proxyService.ProxyAnthropicPassthrough(c, proxyKey, provider)
+	result, err := h.proxyService.ProxyAnthropicPassthrough(c, proxyKey)
 	if err != nil {
 		// If ProxyAnthropicPassthrough already wrote to the response, don't write again
 		if c.Writer.Written() {

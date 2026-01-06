@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -278,6 +279,27 @@ func (s *ProviderService) TestConnectionWithRequest(req *CreateProviderRequest) 
 	return s.testProviderConnection(provider)
 }
 
+// FetchAvailableModels fetches available models for an existing provider
+func (s *ProviderService) FetchAvailableModels(userID, providerID uint) ([]string, error) {
+	provider, err := s.getProviderByID(userID, providerID)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.fetchModelsFromProvider(provider)
+}
+
+// FetchAvailableModelsWithRequest fetches available models with provided credentials (before saving)
+func (s *ProviderService) FetchAvailableModelsWithRequest(req *CreateProviderRequest) ([]string, error) {
+	provider := &models.Provider{
+		ProviderType: req.ProviderType,
+		BaseURL:      req.BaseURL,
+		APIKey:       req.APIKey,
+	}
+
+	return s.fetchModelsFromProvider(provider)
+}
+
 // GetProviderByIDInternal retrieves a provider by ID (for internal use by other services)
 // Returns the full provider model including the API key
 func (s *ProviderService) GetProviderByIDInternal(providerID uint) (*models.Provider, error) {
@@ -532,4 +554,94 @@ func (s *ProviderService) testProviderConnection(provider *models.Provider) erro
 	}
 
 	return nil
+}
+
+// fetchModelsFromProvider fetches the list of available models from the provider
+func (s *ProviderService) fetchModelsFromProvider(provider *models.Provider) ([]string, error) {
+	// For OAuth providers, ensure we have a valid access token
+	if provider.ProviderType == models.ProviderTypeAnthropicMax {
+		if !provider.OAuthConnected {
+			return nil, fmt.Errorf("OAuth not connected - please connect via OAuth first")
+		}
+		if s.oauthService != nil {
+			if err := s.oauthService.EnsureValidToken(provider); err != nil {
+				return nil, fmt.Errorf("failed to refresh OAuth token: %w", err)
+			}
+		}
+	}
+
+	baseURL := provider.GetBaseURL()
+	if baseURL == "" {
+		return nil, fmt.Errorf("no base URL configured for provider")
+	}
+
+	// Build models endpoint based on provider type
+	var testURL string
+	switch provider.ProviderType {
+	case models.ProviderTypeOpenAI, models.ProviderTypeVLLM, models.ProviderTypeLocal:
+		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	case models.ProviderTypeAnthropic, models.ProviderTypeAnthropicMax:
+		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	case models.ProviderTypeZai, models.ProviderTypeZaiInternational:
+		testURL = strings.TrimSuffix(baseURL, "/") + "/models"
+	default:
+		testURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	}
+
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", testURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set appropriate auth headers based on provider type
+	switch provider.ProviderType {
+	case models.ProviderTypeAnthropic:
+		req.Header.Set("x-api-key", provider.APIKey)
+		req.Header.Set("anthropic-version", "2023-06-01")
+	case models.ProviderTypeAnthropicMax:
+		req.Header.Set("Authorization", "Bearer "+provider.AccessToken)
+		req.Header.Set("anthropic-version", "2023-06-01")
+	default:
+		req.Header.Set("Authorization", "Bearer "+provider.APIKey)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("connection failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, fmt.Errorf("authentication failed: invalid credentials")
+	}
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("provider returned error status: %d", resp.StatusCode)
+	}
+
+	// Parse response
+	var modelsResp struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&modelsResp); err != nil {
+		return nil, fmt.Errorf("failed to parse provider response: %w", err)
+	}
+
+	modelIDs := make([]string, 0, len(modelsResp.Data))
+	for _, m := range modelsResp.Data {
+		if m.ID != "" {
+			modelIDs = append(modelIDs, m.ID)
+		}
+	}
+
+	return modelIDs, nil
 }

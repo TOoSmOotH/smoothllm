@@ -17,7 +17,7 @@ func setupProxyTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 
-	err = db.AutoMigrate(&models.Provider{}, &models.ProxyAPIKey{}, &models.UsageRecord{})
+	err = db.AutoMigrate(&models.Provider{}, &models.ProxyAPIKey{}, &models.UsageRecord{}, &models.KeyAllowedProvider{})
 	require.NoError(t, err)
 
 	return db
@@ -508,8 +508,8 @@ func TestProxyService_ValidateAndGetProvider(t *testing.T) {
 
 		// Create key
 		createReq := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 		created, err := keyService.CreateKey(1, createReq)
 		require.NoError(t, err)
@@ -550,19 +550,20 @@ func TestProxyService_ValidateAndGetProvider(t *testing.T) {
 
 		// Create key
 		createReq := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 		created, err := keyService.CreateKey(1, createReq)
 		require.NoError(t, err)
 
-		// Deactivate provider
-		db.Model(provider).Update("is_active", false)
+		// Deactivate provider using map to ensure zero-value bool is included
+		err = db.Model(&models.Provider{}).Where("id = ?", provider.ID).Updates(map[string]interface{}{"is_active": false}).Error
+		require.NoError(t, err)
 
 		// Validate should fail
 		_, _, err = service.ValidateAndGetProvider(created.Key)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not active")
+		assert.Contains(t, err.Error(), "no active providers")
 	})
 }
 

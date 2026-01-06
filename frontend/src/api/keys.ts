@@ -1,10 +1,16 @@
 import apiClient from '@/api/client'
 
 // Key response from the backend (returned for list/get/update operations)
+export interface AllowedProvider {
+  provider_id: number
+  provider_name: string
+  provider_type: string
+  models: string[]
+}
+
 export interface KeyResponse {
   id: number
   user_id: number
-  provider_id: number
   key_prefix: string
   name: string
   is_active: boolean
@@ -12,9 +18,7 @@ export interface KeyResponse {
   expires_at: string | null
   created_at: string
   updated_at: string
-  // Provider info for convenience
-  provider_name?: string
-  provider_type?: string
+  allowed_providers: AllowedProvider[]
 }
 
 // Key create response - includes the full key (only returned once on creation)
@@ -22,16 +26,22 @@ export interface KeyCreateResponse extends KeyResponse {
   key: string
 }
 
-export interface CreateKeyRequest {
+export interface ProviderSelection {
   provider_id: number
-  name?: string
+  models: string[]
+}
+
+export interface CreateKeyRequest {
+  name: string
   expires_at?: string
+  allowed_providers: ProviderSelection[]
 }
 
 export interface UpdateKeyRequest {
   name?: string
   is_active?: boolean
   expires_at?: string
+  allowed_providers?: ProviderSelection[]
 }
 
 export interface RevokeKeyResponse {

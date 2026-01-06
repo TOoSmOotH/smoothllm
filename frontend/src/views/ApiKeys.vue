@@ -86,9 +86,21 @@
                 <p class="text-text-tertiary mb-1">Key Prefix</p>
                 <p class="text-text-primary font-mono">{{ apiKey.key_prefix }}</p>
               </div>
-              <div>
-                <p class="text-text-tertiary mb-1">Provider</p>
-                <p class="text-text-primary font-mono">{{ getProviderName(apiKey.provider_id) }}</p>
+              <div class="lg:col-span-2">
+                <p class="text-text-tertiary mb-1">Allowed Providers</p>
+                <div class="flex flex-wrap gap-2">
+                  <div
+                    v-for="ap in apiKey.allowed_providers"
+                    :key="ap.provider_id"
+                    class="bg-bg-tertiary border border-border-subtle rounded px-2 py-1 text-xs"
+                  >
+                    <span class="font-medium text-text-primary">{{ ap.provider_name }}</span>
+                    <span v-if="ap.models && ap.models.length > 0" class="text-text-muted ml-1">
+                      ({{ ap.models.length }} models)
+                    </span>
+                    <span v-else class="text-text-muted ml-1">(All models)</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <p class="text-text-tertiary mb-1">Last Used</p>
@@ -149,22 +161,52 @@
                 :error="errors.name"
               />
 
-              <div v-if="!editingKey">
-                <label class="block text-sm font-medium text-text-secondary mb-2">Provider</label>
-                <select
-                  v-model="form.provider_id"
-                  class="w-full font-sans bg-bg-secondary border border-border-default rounded-md text-text-primary px-4 py-3 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 transition-all duration-200"
-                >
-                  <option :value="0" disabled>Select a provider...</option>
-                  <option
+              <div>
+                <label class="block text-sm font-medium text-text-secondary mb-3">Allowed Providers & Models</label>
+                <div class="space-y-4 max-h-60 overflow-y-auto p-4 bg-bg-secondary border border-border-default rounded-md">
+                  <div
                     v-for="provider in providersStore.activeProviders"
                     :key="provider.id"
-                    :value="provider.id"
+                    class="border-b border-border-subtle last:border-0 pb-4 last:pb-0"
                   >
-                    {{ provider.name }} ({{ provider.provider_type }})
-                  </option>
-                </select>
-                <p v-if="errors.provider_id" class="mt-1 text-xs text-error-500 font-medium">{{ errors.provider_id }}</p>
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        :checked="isProviderSelected(provider.id)"
+                        @change="toggleProvider(provider.id)"
+                        class="w-4 h-4 rounded border-border-default text-primary-500 focus:ring-primary-500/20 bg-bg-primary"
+                      />
+                      <span class="text-sm font-medium text-text-primary group-hover:text-primary-500 transition-colors">
+                        {{ provider.name }}
+                      </span>
+                      <span class="text-xs text-text-tertiary">({{ provider.provider_type }})</span>
+                    </label>
+
+                    <div v-if="isProviderSelected(provider.id)" class="ml-7 mt-3 space-y-2">
+                       <p class="text-xs text-text-muted mb-1 italic">
+                         Select models (uncheck all to allow all)
+                       </p>
+                       <div class="grid grid-cols-1 gap-2">
+                         <label
+                           v-for="model in provider.models"
+                           :key="model"
+                           class="flex items-center gap-2 cursor-pointer group/model"
+                         >
+                           <input
+                             type="checkbox"
+                             :checked="isModelSelected(provider.id, model)"
+                             @change="toggleModel(provider.id, model)"
+                             class="w-3.5 h-3.5 rounded border-border-default text-primary-500 focus:ring-primary-500/20 bg-bg-primary"
+                           />
+                           <span class="text-xs text-text-secondary group-hover/model:text-text-primary transition-colors">
+                             {{ model }}
+                           </span>
+                         </label>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+                <p v-if="errors.allowed_providers" class="mt-1 text-xs text-error-500 font-medium">{{ errors.allowed_providers }}</p>
               </div>
 
               <div>
@@ -351,8 +393,8 @@ const keyCopied = ref(false)
 // Form state
 const form = ref({
   name: '',
-  provider_id: 0,
   expires_at: '',
+  allowed_providers: [] as { provider_id: number; models: string[] }[],
 })
 
 const errors = ref<Record<string, string>>({})
@@ -361,12 +403,6 @@ const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
 const revoking = ref(false)
 const deleting = ref(false)
-
-// Helper functions
-const getProviderName = (providerId: number): string => {
-  const provider = providersStore.getProviderById(providerId)
-  return provider?.name || 'Unknown Provider'
-}
 
 const formatDate = (dateString?: string | null): string => {
   if (!dateString) return ''
@@ -393,7 +429,10 @@ const openEditModal = (key: KeyResponse) => {
   editingKey.value = key
   form.value = {
     name: key.name || '',
-    provider_id: key.provider_id,
+    allowed_providers: key.allowed_providers.map(ap => ({
+      provider_id: ap.provider_id,
+      models: [...ap.models],
+    })),
     expires_at: key.expires_at ? key.expires_at.split('T')[0] : '',
   }
   errors.value = {}
@@ -435,18 +474,48 @@ const closeDeleteModal = () => {
 const resetForm = () => {
   form.value = {
     name: '',
-    provider_id: providersStore.activeProviders[0]?.id || 0,
     expires_at: '',
+    allowed_providers: [],
   }
   errors.value = {}
+}
+
+const isProviderSelected = (providerId: number) => {
+  return form.value.allowed_providers.some(p => p.provider_id === providerId)
+}
+
+const toggleProvider = (providerId: number) => {
+  const index = form.value.allowed_providers.findIndex(p => p.provider_id === providerId)
+  if (index === -1) {
+    form.value.allowed_providers.push({ provider_id: providerId, models: [] })
+  } else {
+    form.value.allowed_providers.splice(index, 1)
+  }
+}
+
+const isModelSelected = (providerId: number, model: string) => {
+  const provider = form.value.allowed_providers.find(p => p.provider_id === providerId)
+  return provider?.models.includes(model) || false
+}
+
+const toggleModel = (providerId: number, model: string) => {
+  const provider = form.value.allowed_providers.find(p => p.provider_id === providerId)
+  if (!provider) return
+
+  const index = provider.models.indexOf(model)
+  if (index === -1) {
+    provider.models.push(model)
+  } else {
+    provider.models.splice(index, 1)
+  }
 }
 
 // Validation
 const validateForm = (): boolean => {
   errors.value = {}
 
-  if (!editingKey.value && form.value.provider_id === 0) {
-    errors.value.provider_id = 'Please select a provider'
+  if (form.value.allowed_providers.length === 0) {
+    errors.value.allowed_providers = 'Please select at least one provider'
   }
 
   return Object.keys(errors.value).length === 0
@@ -463,20 +532,15 @@ const handleSubmit = async () => {
       await apiKeysStore.updateApiKey(editingKey.value.id, {
         name: form.value.name.trim() || undefined,
         expires_at: form.value.expires_at || undefined,
+        allowed_providers: form.value.allowed_providers,
       })
       toast.success('API key updated successfully')
       closeModal()
     } else {
       const payload: CreateKeyRequest = {
-        provider_id: form.value.provider_id,
-      }
-
-      if (form.value.name.trim()) {
-        payload.name = form.value.name.trim()
-      }
-
-      if (form.value.expires_at) {
-        payload.expires_at = form.value.expires_at
+        name: form.value.name.trim(),
+        expires_at: form.value.expires_at || undefined,
+        allowed_providers: form.value.allowed_providers,
       }
 
       const result = await apiKeysStore.createApiKey(payload)

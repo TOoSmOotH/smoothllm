@@ -21,7 +21,7 @@ func setupKeyTestDB(t *testing.T) *gorm.DB {
 	require.NoError(t, err)
 
 	// Auto-migrate the required tables
-	err = db.AutoMigrate(&models.Provider{}, &models.ProxyAPIKey{})
+	err = db.AutoMigrate(&models.Provider{}, &models.ProxyAPIKey{}, &models.KeyAllowedProvider{})
 	require.NoError(t, err)
 
 	return db
@@ -159,8 +159,8 @@ func TestKeyService_CreateKey(t *testing.T) {
 		provider := createTestProvider(t, db, 1)
 
 		req := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 
 		result, err := service.CreateKey(1, req)
@@ -170,7 +170,8 @@ func TestKeyService_CreateKey(t *testing.T) {
 		assert.True(t, strings.HasPrefix(result.Key, models.ProxyAPIKeyPrefix))
 		assert.Equal(t, "Test Key", result.Name)
 		assert.True(t, result.IsActive)
-		assert.Equal(t, provider.ID, result.ProviderID)
+		assert.Len(t, result.AllowedProviders, 1)
+		assert.Equal(t, provider.ID, result.AllowedProviders[0].ProviderID)
 	})
 
 	t.Run("returns full key only on creation", func(t *testing.T) {
@@ -179,8 +180,8 @@ func TestKeyService_CreateKey(t *testing.T) {
 		provider := createTestProvider(t, db, 1)
 
 		req := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 
 		createResult, err := service.CreateKey(1, req)
@@ -199,14 +200,14 @@ func TestKeyService_CreateKey(t *testing.T) {
 		service := NewKeyService(db)
 
 		req := &CreateKeyRequest{
-			ProviderID: 999,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: 999}},
+			Name:             "Test Key",
 		}
 
 		result, err := service.CreateKey(1, req)
 		assert.Error(t, err)
 		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "provider not found")
+		assert.Contains(t, err.Error(), "not found")
 	})
 
 	t.Run("fails for inactive provider", func(t *testing.T) {
@@ -230,8 +231,8 @@ func TestKeyService_CreateKey(t *testing.T) {
 		require.NoError(t, err)
 
 		req := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 
 		result, err := service.CreateKey(1, req)
@@ -246,14 +247,14 @@ func TestKeyService_CreateKey(t *testing.T) {
 		provider := createTestProvider(t, db, 1) // User 1's provider
 
 		req := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 
 		result, err := service.CreateKey(2, req) // User 2 trying to use User 1's provider
 		assert.Error(t, err)
 		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "provider not found")
+		assert.Contains(t, err.Error(), "not found")
 	})
 
 	t.Run("fails for name longer than 100 characters", func(t *testing.T) {
@@ -262,8 +263,8 @@ func TestKeyService_CreateKey(t *testing.T) {
 		provider := createTestProvider(t, db, 1)
 
 		req := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       strings.Repeat("a", 101),
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             strings.Repeat("a", 101),
 		}
 
 		result, err := service.CreateKey(1, req)
@@ -279,9 +280,9 @@ func TestKeyService_CreateKey(t *testing.T) {
 
 		pastDate := time.Now().Add(-24 * time.Hour)
 		req := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
-			ExpiresAt:  &pastDate,
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
+			ExpiresAt:        &pastDate,
 		}
 
 		result, err := service.CreateKey(1, req)
@@ -297,9 +298,9 @@ func TestKeyService_CreateKey(t *testing.T) {
 
 		futureDate := time.Now().Add(30 * 24 * time.Hour)
 		req := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Expiring Key",
-			ExpiresAt:  &futureDate,
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Expiring Key",
+			ExpiresAt:        &futureDate,
 		}
 
 		result, err := service.CreateKey(1, req)
@@ -316,8 +317,8 @@ func TestKeyService_ValidateKey(t *testing.T) {
 
 		// Create a key
 		createReq := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 		created, err := service.CreateKey(1, createReq)
 		require.NoError(t, err)
@@ -354,8 +355,8 @@ func TestKeyService_ValidateKey(t *testing.T) {
 
 		// Create a key
 		createReq := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 		created, err := service.CreateKey(1, createReq)
 		require.NoError(t, err)
@@ -379,9 +380,9 @@ func TestKeyService_ValidateKey(t *testing.T) {
 		// Create a key with a future expiration
 		futureDate := time.Now().Add(1 * time.Hour)
 		createReq := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Expiring Key",
-			ExpiresAt:  &futureDate,
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Expiring Key",
+			ExpiresAt:        &futureDate,
 		}
 		created, err := service.CreateKey(1, createReq)
 		require.NoError(t, err)
@@ -404,8 +405,8 @@ func TestKeyService_ValidateKey(t *testing.T) {
 
 		// Create a key
 		createReq := &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Test Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Test Key",
 		}
 		created, err := service.CreateKey(1, createReq)
 		require.NoError(t, err)
@@ -428,8 +429,8 @@ func TestKeyService_ListKeys(t *testing.T) {
 		// Create multiple keys
 		for i := 0; i < 3; i++ {
 			req := &CreateKeyRequest{
-				ProviderID: provider.ID,
-				Name:       "Key " + string(rune('A'+i)),
+				AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+				Name:             "Key " + string(rune('A'+i)),
 			}
 			_, err := service.CreateKey(1, req)
 			require.NoError(t, err)
@@ -467,9 +468,9 @@ func TestKeyService_ListKeys(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create keys for both users
-		_, err = service.CreateKey(1, &CreateKeyRequest{ProviderID: provider1.ID, Name: "User 1 Key"})
+		_, err = service.CreateKey(1, &CreateKeyRequest{AllowedProviders: []ProviderSelection{{ProviderID: provider1.ID}}, Name: "User 1 Key"})
 		require.NoError(t, err)
-		_, err = service.CreateKey(2, &CreateKeyRequest{ProviderID: provider2.ID, Name: "User 2 Key"})
+		_, err = service.CreateKey(2, &CreateKeyRequest{AllowedProviders: []ProviderSelection{{ProviderID: provider2.ID}}, Name: "User 2 Key"})
 		require.NoError(t, err)
 
 		// List keys for user 1
@@ -488,8 +489,8 @@ func TestKeyService_UpdateKey(t *testing.T) {
 
 		// Create a key
 		created, err := service.CreateKey(1, &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Original Name",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Original Name",
 		})
 		require.NoError(t, err)
 
@@ -507,8 +508,8 @@ func TestKeyService_UpdateKey(t *testing.T) {
 
 		// Create a key
 		created, err := service.CreateKey(1, &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "Active Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "Active Key",
 		})
 		require.NoError(t, err)
 		assert.True(t, created.IsActive)
@@ -537,8 +538,8 @@ func TestKeyService_UpdateKey(t *testing.T) {
 
 		// Create a key for user 1
 		created, err := service.CreateKey(1, &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "User 1 Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "User 1 Key",
 		})
 		require.NoError(t, err)
 
@@ -558,8 +559,8 @@ func TestKeyService_DeleteKey(t *testing.T) {
 
 		// Create a key
 		created, err := service.CreateKey(1, &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "To Delete",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "To Delete",
 		})
 		require.NoError(t, err)
 
@@ -588,8 +589,8 @@ func TestKeyService_DeleteKey(t *testing.T) {
 
 		// Create a key for user 1
 		created, err := service.CreateKey(1, &CreateKeyRequest{
-			ProviderID: provider.ID,
-			Name:       "User 1 Key",
+			AllowedProviders: []ProviderSelection{{ProviderID: provider.ID}},
+			Name:             "User 1 Key",
 		})
 		require.NoError(t, err)
 

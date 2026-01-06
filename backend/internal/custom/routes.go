@@ -48,10 +48,12 @@ func RegisterRoutes(v1 *gin.RouterGroup, deps Dependencies) {
 		providers.GET("", providerHandler.ListProviders)
 		providers.POST("", providerHandler.CreateProvider)
 		providers.POST("/test", providerHandler.TestConnectionWithCredentials)
+		providers.POST("/fetch-models", providerHandler.FetchModelsWithCredentials)
 		providers.GET("/:id", providerHandler.GetProvider)
 		providers.PUT("/:id", providerHandler.UpdateProvider)
 		providers.DELETE("/:id", providerHandler.DeleteProvider)
 		providers.POST("/:id/test", providerHandler.TestConnection)
+		providers.GET("/:id/available-models", providerHandler.FetchModels)
 	}
 
 	// OAuth routes for Claude Max

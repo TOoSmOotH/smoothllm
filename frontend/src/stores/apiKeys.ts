@@ -26,9 +26,6 @@ export const useApiKeysStore = defineStore('apiKeys', () => {
     return (id: number) => apiKeys.value.find((k) => k.id === id)
   })
 
-  const getApiKeysByProviderId = computed(() => {
-    return (providerId: number) => apiKeys.value.filter((k) => k.provider_id === providerId)
-  })
 
   // Actions
   const fetchApiKeys = async (): Promise<KeyResponse[]> => {
@@ -197,7 +194,6 @@ export const useApiKeysStore = defineStore('apiKeys', () => {
     apiKeyCount,
     activeApiKeyCount,
     getApiKeyById,
-    getApiKeysByProviderId,
 
     // Actions
     fetchApiKeys,
