@@ -143,14 +143,9 @@ test.describe('API Keys Management', () => {
     const keyNameInput = page.locator('input[placeholder="My API Key"]');
     await expect(keyNameInput).toBeVisible({ timeout: 10000 });
 
-    // Provider dropdown should exist
-    const providerSelect = page.locator('select').first();
-    await expect(providerSelect).toBeVisible();
-
-    // Our test provider should be in the dropdown
-    const options = await providerSelect.locator('option').allTextContents();
-    const hasProvider = options.some(opt => opt.includes(testProvider.name));
-    expect(hasProvider).toBe(true);
+    // Provider list should show our test provider
+    const providerLabel = page.locator('label').filter({ hasText: testProvider.name });
+    await expect(providerLabel).toBeVisible({ timeout: 10000 });
   });
 
   test('should create a new API key', async ({ page }) => {
@@ -176,24 +171,12 @@ test.describe('API Keys Management', () => {
     // Fill in the form
     await keyNameInput.fill(testApiKey.name);
 
-    // Wait for provider dropdown to populate
-    const providerSelect = page.locator('select').first();
-    await expect(providerSelect).toBeVisible({ timeout: 5000 });
+    // Wait for provider list to populate
+    const providerLabel = page.locator('label').filter({ hasText: testProvider.name });
+    await expect(providerLabel).toBeVisible({ timeout: 10000 });
 
-    // Wait for options to be populated (more than just the placeholder)
-    await page.waitForFunction(
-      () => {
-        const select = document.querySelector('select');
-        if (!select) return false;
-        const options = select.querySelectorAll('option:not([disabled])');
-        return options.length > 0;
-      },
-      { timeout: 10000 }
-    );
-
-    // Select the first available (non-disabled) provider by index
-    // Index 0 is the disabled "Select a provider..." placeholder
-    await providerSelect.selectOption({ index: 1 });
+    // Select the provider by clicking the label (checkbox)
+    await providerLabel.click();
 
     // Submit - click the button inside the modal (not the one in the page header)
     // The modal is teleported to body, so find the modal container first
@@ -226,21 +209,10 @@ test.describe('API Keys Management', () => {
     await expect(keyNameInput).toBeVisible({ timeout: 10000 });
 
     await keyNameInput.fill(`Another Key ${randomSuffix}`);
-    const providerSelect = page.locator('select').first();
-
-    // Wait for options to be populated
-    await page.waitForFunction(
-      () => {
-        const select = document.querySelector('select');
-        if (!select) return false;
-        const options = select.querySelectorAll('option:not([disabled])');
-        return options.length > 0;
-      },
-      { timeout: 10000 }
-    );
-
-    // Select the first available provider by index
-    await providerSelect.selectOption({ index: 1 });
+    // Wait for provider list
+    const providerLabel = page.locator('label').filter({ hasText: testProvider.name });
+    await expect(providerLabel).toBeVisible({ timeout: 10000 });
+    await providerLabel.click();
 
     // Submit - click the button inside the modal
     const modalSubmitButton = page.locator('.fixed.inset-0').getByRole('button', { name: 'Create Key' });
