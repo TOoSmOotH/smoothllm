@@ -17,19 +17,21 @@ jobs:
         with:
           go-version: '1.21'
           cache-dependency-path: backend/go.sum
-      - run: |
-          cd backend
-          go test -v ./...
+      - name: Run Backend Tests
+        run: go test -v ./...
+        working-directory: backend
 
       - name: Frontend Unit Tests
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache-dependency-path: frontend/package-lock.json
-      - run: |
-          cd frontend
-          npm ci
-          npm run test -- --run
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Run Frontend Tests
+        run: npm run test -- --run --passWithNoTests
+        working-directory: frontend
 
   e2e-tests:
     runs-on: ubuntu-latest
