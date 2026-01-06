@@ -189,7 +189,7 @@
                 <Input
                   v-model="form.api_key"
                   type="password"
-                  label="Refresh Token"
+                  :label="editingProvider ? 'Refresh Token (leave empty to keep current)' : 'Refresh Token'"
                   placeholder="sk-ant-ort01-..."
                   helper-text="Your Claude Max refresh token (starts with sk-ant-ort01-)"
                   :error="errors.api_key"

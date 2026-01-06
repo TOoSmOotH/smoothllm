@@ -181,7 +181,18 @@ func (s *ProviderService) UpdateProvider(userID, providerID uint, req *UpdatePro
 		updates["base_url"] = *req.BaseURL
 	}
 	if req.APIKey != nil {
-		updates["api_key"] = *req.APIKey
+		// For Claude Max providers, api_key is actually the refresh token
+		providerType := provider.ProviderType
+		if req.ProviderType != nil {
+			providerType = *req.ProviderType
+		}
+		if providerType == models.ProviderTypeAnthropicMax {
+			updates["refresh_token"] = *req.APIKey
+			// Clear the api_key field
+			updates["api_key"] = ""
+		} else {
+			updates["api_key"] = *req.APIKey
+		}
 	}
 	if req.IsActive != nil {
 		updates["is_active"] = *req.IsActive
@@ -205,6 +216,20 @@ func (s *ProviderService) UpdateProvider(userID, providerID uint, req *UpdatePro
 	// Refresh provider data
 	if err := s.db.First(provider, providerID).Error; err != nil {
 		return nil, fmt.Errorf("failed to refresh provider: %w", err)
+	}
+
+	// For Claude Max providers with a new refresh token, validate it
+	if req.APIKey != nil && provider.ProviderType == models.ProviderTypeAnthropicMax && s.oauthService != nil {
+		if err := s.oauthService.RefreshAccessToken(provider); err != nil {
+			// Revert the update if token refresh fails
+			updates["refresh_token"] = ""
+			updates["oauth_connected"] = false
+			s.db.Model(provider).Updates(updates)
+			return nil, fmt.Errorf("invalid refresh token: %w", err)
+		}
+		// Mark as connected
+		provider.OAuthConnected = true
+		s.db.Model(provider).Update("oauth_connected", true)
 	}
 
 	response := s.buildProviderResponse(provider)
