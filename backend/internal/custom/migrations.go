@@ -5,7 +5,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// AutoMigrate runs database migrations for custom models
 func AutoMigrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(
 		&models.Provider{},
@@ -16,9 +15,50 @@ func AutoMigrate(db *gorm.DB) error {
 		return err
 	}
 
-	// Run data migration for existing keys if needed
+	// 1. Handle usage_records schema inconsistencies (e.g. model vs model_name)
+	if err := migrateUsageRecords(db); err != nil {
+		return err
+	}
+
+	// 2. Run data migration for existing keys if needed
 	if err := migrateExistingData(db); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// migrateUsageRecords handles column renaming and additions for the usage_records table in SQLite
+func migrateUsageRecords(db *gorm.DB) error {
+	// If the table doesn't exist yet, return
+	if !db.Migrator().HasTable("usage_records") {
+		return nil
+	}
+
+	// SQLite doesn't support RENAME COLUMN, so if we have model_name, we need to handle it.
+	// Check if 'model' column exists. If not, check if 'model_name' exists and rename.
+	if !db.Migrator().HasColumn(&models.UsageRecord{}, "model") {
+		if db.Migrator().HasColumn("usage_records", "model_name") {
+			// Try to rename column (only works in recent SQLite/GORM versions)
+			if err := db.Migrator().RenameColumn("usage_records", "model_name", "model"); err != nil {
+				// Fallback: This is safer for some SQLite versions
+				return db.Transaction(func(tx *gorm.DB) error {
+					if err := tx.Migrator().RenameTable("usage_records", "usage_records_old"); err != nil {
+						return err
+					}
+					if err := tx.AutoMigrate(&models.UsageRecord{}); err != nil {
+						return err
+					}
+					// Copy data, mapping model_name to model
+					// Also handle status_code, cost, etc. if they were added later
+					return tx.Exec(`
+						INSERT INTO usage_records (id, created_at, updated_at, deleted_at, user_id, proxy_key_id, provider_id, model, input_tokens, output_tokens, total_tokens, cost, request_duration, status_code, error_message)
+						SELECT id, created_at, updated_at, deleted_at, user_id, proxy_key_id, provider_id, model_name, input_tokens, output_tokens, total_tokens, cost, request_duration, status_code, error_message
+						FROM usage_records_old
+					`).Error
+				})
+			}
+		}
 	}
 
 	return nil

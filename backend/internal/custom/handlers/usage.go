@@ -96,7 +96,10 @@ func (h *UsageHandler) GetUsageSummary(c *gin.Context) {
 
 	summary, err := h.usageService.GetUsageSummary(userID, params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   err.Error(),
+			"message": "Failed to get usage summary",
+		})
 		return
 	}
 
@@ -134,7 +137,10 @@ func (h *UsageHandler) GetUsageByKey(c *gin.Context) {
 
 	byKey, err := h.usageService.GetUsageByKey(userID, params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   err.Error(),
+			"message": "Failed to get usage by key",
+		})
 		return
 	}
 
@@ -153,7 +159,10 @@ func (h *UsageHandler) GetUsageByProvider(c *gin.Context) {
 
 	byProvider, err := h.usageService.GetUsageByProvider(userID, params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   err.Error(),
+			"message": "Failed to get usage by provider",
+		})
 		return
 	}
 

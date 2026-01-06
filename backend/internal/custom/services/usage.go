@@ -178,16 +178,16 @@ func (s *UsageService) GetUsageSummary(userID uint, params *UsageQueryParams) (*
 	query = s.applyFilters(query, params)
 
 	var result struct {
-		TotalRequests      int64
-		SuccessfulRequests int64
-		FailedRequests     int64
-		TotalInputTokens   int64
-		TotalOutputTokens  int64
-		TotalTokens        int64
-		TotalCost          float64
-		TotalDuration      int64
-		MinDate            *time.Time
-		MaxDate            *time.Time
+		TotalRequests      int64      `gorm:"column:total_requests"`
+		SuccessfulRequests int64      `gorm:"column:successful_requests"`
+		FailedRequests     int64      `gorm:"column:failed_requests"`
+		TotalInputTokens   int64      `gorm:"column:total_input_tokens"`
+		TotalOutputTokens  int64      `gorm:"column:total_output_tokens"`
+		TotalTokens        int64      `gorm:"column:total_tokens"`
+		TotalCost          float64    `gorm:"column:total_cost"`
+		TotalDuration      int64      `gorm:"column:total_duration"`
+		MinDate            *time.Time `gorm:"column:min_date"`
+		MaxDate            *time.Time `gorm:"column:max_date"`
 	}
 
 	// Get aggregate stats
@@ -242,13 +242,13 @@ func (s *UsageService) GetDailyUsage(userID uint, params *UsageQueryParams) ([]D
 	query = s.applyFilters(query, params)
 
 	var results []struct {
-		Date          string
-		Requests      int64
-		InputTokens   int64
-		OutputTokens  int64
-		TotalTokens   int64
-		Cost          float64
-		TotalDuration int64
+		Date          string  `gorm:"column:date"`
+		Requests      int64   `gorm:"column:requests"`
+		InputTokens   int64   `gorm:"column:input_tokens"`
+		OutputTokens  int64   `gorm:"column:output_tokens"`
+		TotalTokens   int64   `gorm:"column:total_tokens"`
+		Cost          float64 `gorm:"column:cost"`
+		TotalDuration int64   `gorm:"column:total_duration"`
 	}
 
 	// Group by date (using SQLite date function)
@@ -292,15 +292,15 @@ func (s *UsageService) GetUsageByKey(userID uint, params *UsageQueryParams) ([]U
 	query = s.applyFilters(query, params)
 
 	var results []struct {
-		KeyID         uint
-		KeyPrefix     string
-		KeyName       string
-		Requests      int64
-		InputTokens   int64
-		OutputTokens  int64
-		TotalTokens   int64
-		Cost          float64
-		TotalDuration int64
+		KeyID         uint    `gorm:"column:key_id"`
+		KeyPrefix     string  `gorm:"column:key_prefix"`
+		KeyName       string  `gorm:"column:key_name"`
+		Requests      int64   `gorm:"column:requests"`
+		InputTokens   int64   `gorm:"column:input_tokens"`
+		OutputTokens  int64   `gorm:"column:output_tokens"`
+		TotalTokens   int64   `gorm:"column:total_tokens"`
+		Cost          float64 `gorm:"column:cost"`
+		TotalDuration int64   `gorm:"column:total_duration"`
 	}
 
 	if err := query.Select(`
@@ -347,15 +347,15 @@ func (s *UsageService) GetUsageByProvider(userID uint, params *UsageQueryParams)
 	query = s.applyFilters(query, params)
 
 	var results []struct {
-		ProviderID    uint
-		ProviderName  string
-		ProviderType  string
-		Requests      int64
-		InputTokens   int64
-		OutputTokens  int64
-		TotalTokens   int64
-		Cost          float64
-		TotalDuration int64
+		ProviderID    uint    `gorm:"column:provider_id"`
+		ProviderName  string  `gorm:"column:provider_name"`
+		ProviderType  string  `gorm:"column:provider_type"`
+		Requests      int64   `gorm:"column:requests"`
+		InputTokens   int64   `gorm:"column:input_tokens"`
+		OutputTokens  int64   `gorm:"column:output_tokens"`
+		TotalTokens   int64   `gorm:"column:total_tokens"`
+		Cost          float64 `gorm:"column:cost"`
+		TotalDuration int64   `gorm:"column:total_duration"`
 	}
 
 	if err := query.Select(`
@@ -400,17 +400,17 @@ func (s *UsageService) GetUsageByModel(userID uint, params *UsageQueryParams) ([
 	query = s.applyFilters(query, params)
 
 	var results []struct {
-		Model         string
-		Requests      int64
-		InputTokens   int64
-		OutputTokens  int64
-		TotalTokens   int64
-		Cost          float64
-		TotalDuration int64
+		Model         string  `gorm:"column:model"`
+		Requests      int64   `gorm:"column:requests"`
+		InputTokens   int64   `gorm:"column:input_tokens"`
+		OutputTokens  int64   `gorm:"column:output_tokens"`
+		TotalTokens   int64   `gorm:"column:total_tokens"`
+		Cost          float64 `gorm:"column:cost"`
+		TotalDuration int64   `gorm:"column:total_duration"`
 	}
 
 	if err := query.Select(`
-		model,
+		COALESCE(model, 'unknown') as model,
 		COUNT(*) as requests,
 		COALESCE(SUM(input_tokens), 0) as input_tokens,
 		COALESCE(SUM(output_tokens), 0) as output_tokens,
