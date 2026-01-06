@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -96,6 +97,7 @@ func (h *UsageHandler) GetUsageSummary(c *gin.Context) {
 
 	summary, err := h.usageService.GetUsageSummary(userID, params)
 	if err != nil {
+		log.Printf("GetUsageSummary error (UserID: %d): %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   err.Error(),
 			"message": "Failed to get usage summary",
@@ -118,6 +120,7 @@ func (h *UsageHandler) GetDailyUsage(c *gin.Context) {
 
 	daily, err := h.usageService.GetDailyUsage(userID, params)
 	if err != nil {
+		log.Printf("GetDailyUsage error (UserID: %d): %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -137,6 +140,7 @@ func (h *UsageHandler) GetUsageByKey(c *gin.Context) {
 
 	byKey, err := h.usageService.GetUsageByKey(userID, params)
 	if err != nil {
+		log.Printf("GetUsageByKey error (UserID: %d): %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   err.Error(),
 			"message": "Failed to get usage by key",
@@ -159,6 +163,7 @@ func (h *UsageHandler) GetUsageByProvider(c *gin.Context) {
 
 	byProvider, err := h.usageService.GetUsageByProvider(userID, params)
 	if err != nil {
+		log.Printf("GetUsageByProvider error (UserID: %d): %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   err.Error(),
 			"message": "Failed to get usage by provider",
@@ -181,6 +186,7 @@ func (h *UsageHandler) GetUsageByModel(c *gin.Context) {
 
 	byModel, err := h.usageService.GetUsageByModel(userID, params)
 	if err != nil {
+		log.Printf("GetUsageByModel error (UserID: %d): %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -201,6 +207,7 @@ func (h *UsageHandler) GetRecentUsage(c *gin.Context) {
 	// Get usage records
 	records, err := h.usageService.GetRecentUsage(userID, params)
 	if err != nil {
+		log.Printf("GetRecentUsage error (UserID: %d): %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
