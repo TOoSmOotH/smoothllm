@@ -178,16 +178,16 @@ func (s *UsageService) GetUsageSummary(userID uint, params *UsageQueryParams) (*
 	query = s.applyFilters(query, params)
 
 	var result struct {
-		TotalRequests      int64      `gorm:"column:total_requests"`
-		SuccessfulRequests int64      `gorm:"column:successful_requests"`
-		FailedRequests     int64      `gorm:"column:failed_requests"`
-		TotalInputTokens   int64      `gorm:"column:total_input_tokens"`
-		TotalOutputTokens  int64      `gorm:"column:total_output_tokens"`
-		TotalTokens        int64      `gorm:"column:total_tokens"`
-		TotalCost          float64    `gorm:"column:total_cost"`
-		TotalDuration      int64      `gorm:"column:total_duration"`
-		MinDate            *time.Time `gorm:"column:min_date"`
-		MaxDate            *time.Time `gorm:"column:max_date"`
+		TotalRequests      int64   `gorm:"column:total_requests"`
+		SuccessfulRequests int64   `gorm:"column:successful_requests"`
+		FailedRequests     int64   `gorm:"column:failed_requests"`
+		TotalInputTokens   int64   `gorm:"column:total_input_tokens"`
+		TotalOutputTokens  int64   `gorm:"column:total_output_tokens"`
+		TotalTokens        int64   `gorm:"column:total_tokens"`
+		TotalCost          float64 `gorm:"column:total_cost"`
+		TotalDuration      int64   `gorm:"column:total_duration"`
+		MinDate            *string `gorm:"column:min_date"`
+		MaxDate            *string `gorm:"column:max_date"`
 	}
 
 	// Get aggregate stats
@@ -215,11 +215,11 @@ func (s *UsageService) GetUsageSummary(userID uint, params *UsageQueryParams) (*
 	// Format dates
 	periodStart := ""
 	periodEnd := ""
-	if result.MinDate != nil && !result.MinDate.IsZero() {
-		periodStart = result.MinDate.Format(time.RFC3339)
+	if result.MinDate != nil {
+		periodStart = *result.MinDate
 	}
-	if result.MaxDate != nil && !result.MaxDate.IsZero() {
-		periodEnd = result.MaxDate.Format(time.RFC3339)
+	if result.MaxDate != nil {
+		periodEnd = *result.MaxDate
 	}
 
 	return &UsageSummaryResponse{
