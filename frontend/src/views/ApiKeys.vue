@@ -593,17 +593,53 @@ const handleDelete = async () => {
 }
 
 // Copy key to clipboard
+const copyToClipboard = async (text: string) => {
+  // Try navigator.clipboard first
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch (err) {
+      console.error('navigator.clipboard.writeText failed:', err)
+    }
+  }
+
+  // Fallback: Use a hidden textarea
+  try {
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    
+    // Ensure it's not visible and doesn't affect layout
+    textArea.style.position = 'fixed'
+    textArea.style.left = '-9999px'
+    textArea.style.top = '0'
+    document.body.appendChild(textArea)
+    
+    textArea.focus()
+    textArea.select()
+    
+    const successful = document.execCommand('copy')
+    document.body.removeChild(textArea)
+    
+    if (successful) return true
+  } catch (err) {
+    console.error('Fallback copy failed:', err)
+  }
+  
+  return false
+}
+
 const copyKey = async () => {
   if (!newlyCreatedKey.value?.key) return
 
-  try {
-    await navigator.clipboard.writeText(newlyCreatedKey.value.key)
+  const success = await copyToClipboard(newlyCreatedKey.value.key)
+  if (success) {
     keyCopied.value = true
     toast.success('API key copied to clipboard')
     setTimeout(() => {
       keyCopied.value = false
     }, 2000)
-  } catch {
+  } else {
     toast.error('Failed to copy to clipboard')
   }
 }

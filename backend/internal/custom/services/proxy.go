@@ -64,9 +64,29 @@ type OpenAIChatRequest struct {
 
 // OpenAIMessage represents a message in the OpenAI format
 type OpenAIMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-	Name    string `json:"name,omitempty"`
+	Role    string      `json:"role"`
+	Content interface{} `json:"content"`
+	Name    string      `json:"name,omitempty"`
+}
+
+// GetContentString returns the message content as a string, handling both string and array formats
+func (m OpenAIMessage) GetContentString() string {
+	switch v := m.Content.(type) {
+	case string:
+		return v
+	case []interface{}:
+		var parts []string
+		for _, part := range v {
+			if p, ok := part.(map[string]interface{}); ok {
+				if text, ok := p["text"].(string); ok {
+					parts = append(parts, text)
+				}
+			}
+		}
+		return strings.Join(parts, "\n")
+	default:
+		return ""
+	}
 }
 
 // AnthropicRequest represents an Anthropic API request
@@ -542,13 +562,14 @@ func (s *ProxyService) transformToAnthropic(req *OpenAIChatRequest, modelName st
 
 	// Transform messages - extract system message to separate field
 	for _, msg := range req.Messages {
+		content := msg.GetContentString()
 		switch msg.Role {
 		case "system":
 			// Anthropic uses a separate system field, not a system message
 			if anthropicReq.System == "" {
-				anthropicReq.System = msg.Content
+				anthropicReq.System = content
 			} else {
-				anthropicReq.System += "\n\n" + msg.Content
+				anthropicReq.System += "\n\n" + content
 			}
 		case "user", "assistant":
 			anthropicReq.Messages = append(anthropicReq.Messages, AnthropicMessage{

@@ -300,6 +300,36 @@ func TestProxyService_TransformToAnthropic(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "at least one")
 	})
+
+	t.Run("handles array content in OpenAI messages", func(t *testing.T) {
+		openAIReq := &OpenAIChatRequest{
+			Model: "claude-sonnet-4",
+			Messages: []OpenAIMessage{
+				{
+					Role: "user",
+					Content: []interface{}{
+						map[string]interface{}{"type": "text", "text": "Hello"},
+						map[string]interface{}{"type": "text", "text": "world!"},
+					},
+				},
+			},
+		}
+
+		body, err := service.transformToAnthropic(openAIReq, "claude-sonnet-4")
+		require.NoError(t, err)
+
+		var anthropicReq AnthropicRequest
+		err = json.Unmarshal(body, &anthropicReq)
+		require.NoError(t, err)
+
+		assert.Len(t, anthropicReq.Messages, 1)
+		assert.Equal(t, "user", anthropicReq.Messages[0].Role)
+
+		// Verification of Content is tricky because it's interface{}, but we can check if it serialized correctly
+		contentBytes, _ := json.Marshal(anthropicReq.Messages[0].Content)
+		assert.Contains(t, string(contentBytes), "Hello")
+		assert.Contains(t, string(contentBytes), "world!")
+	})
 }
 
 func TestProxyService_ExtractUsageFromResponse(t *testing.T) {
