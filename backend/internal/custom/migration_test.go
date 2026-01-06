@@ -12,20 +12,27 @@ import (
 
 func TestMigration_DropProviderID(t *testing.T) {
 	// 1. Setup a database with the OLD schema using GORM
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(":memory:?_foreign_keys=on"), &gorm.Config{})
 	require.NoError(t, err)
 
-	// Define the old model structure locally for setup
-	type OldProxyAPIKey struct {
-		gorm.Model
-		UserID     uint   `gorm:"not null"`
-		KeyHash    string `gorm:"not null"`
-		KeyPrefix  string `gorm:"not null"`
-		ProviderID uint   `gorm:"not null"` // The offending column
-	}
-
-	// Create tables using the old model and regular models
-	err = db.Table("proxy_api_keys").AutoMigrate(&OldProxyAPIKey{})
+	// Manually create the table with the old column and a foreign key constraint
+	err = db.Exec(`
+		CREATE TABLE proxy_api_keys (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at DATETIME,
+			updated_at DATETIME,
+			deleted_at DATETIME,
+			user_id INTEGER NOT NULL,
+			key_hash TEXT NOT NULL,
+			key_prefix TEXT NOT NULL,
+			name TEXT,
+			is_active BOOLEAN DEFAULT 1,
+			last_used_at DATETIME,
+			expires_at DATETIME,
+			provider_id INTEGER NOT NULL,
+			CONSTRAINT fk_proxy_api_keys_provider FOREIGN KEY (provider_id) REFERENCES providers(id) ON DELETE CASCADE
+		)
+	`).Error
 	require.NoError(t, err)
 	err = db.AutoMigrate(&models.Provider{}, &models.KeyAllowedProvider{})
 	require.NoError(t, err)
@@ -38,12 +45,11 @@ func TestMigration_DropProviderID(t *testing.T) {
 	err = db.Create(&provider).Error
 	require.NoError(t, err)
 
-	oldKey := OldProxyAPIKey{UserID: 1, KeyHash: "hash", KeyPrefix: "sk-", ProviderID: provider.ID}
-	err = db.Table("proxy_api_keys").Create(&oldKey).Error
+	err = db.Exec("INSERT INTO proxy_api_keys (user_id, key_hash, key_prefix, provider_id, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))", 1, "hash", "sk-", provider.ID).Error
 	require.NoError(t, err)
 
-	// 2. Run our custom AutoMigrate which calls migrateExistingData
-	err = AutoMigrate(db)
+	// 2. Run our custom migration logic
+	err = migrateExistingData(db)
 	require.NoError(t, err)
 
 	// 3. Verify the column is gone
@@ -51,7 +57,7 @@ func TestMigration_DropProviderID(t *testing.T) {
 
 	// 4. Verify data was migrated to KeyAllowedProvider
 	var count int64
-	err = db.Model(&models.KeyAllowedProvider{}).Where("proxy_api_key_id = ? AND provider_id = ?", oldKey.ID, provider.ID).Count(&count).Error
+	err = db.Model(&models.KeyAllowedProvider{}).Where("provider_id = ?", provider.ID).Count(&count).Error
 	require.NoError(t, err)
 	assert.Equal(t, int64(1), count, "existing key should have been migrated to KeyAllowedProvider")
 

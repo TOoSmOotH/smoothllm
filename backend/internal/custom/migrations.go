@@ -56,8 +56,38 @@ func migrateExistingData(db *gorm.DB) error {
 			}
 		}
 
-		// 2. Drop the column after migration to prevent NOT NULL constraint failures on new inserts
-		if err := db.Migrator().DropColumn(&models.ProxyAPIKey{}, "provider_id"); err != nil {
+		// 2. Drop the column and its foreign key constraint
+		// GORM's DropColumn is unreliable with foreign keys in SQLite.
+		// We use a manual reconstruction approach.
+		err := db.Transaction(func(tx *gorm.DB) error {
+			// Rename old table
+			if err := tx.Migrator().RenameTable("proxy_api_keys", "proxy_api_keys_old"); err != nil {
+				return err
+			}
+
+			// Create new table via AutoMigrate
+			if err := tx.AutoMigrate(&models.ProxyAPIKey{}); err != nil {
+				return err
+			}
+
+			// Copy data from old to new (omitting provider_id)
+			// We list all columns explicitly to be safe
+			if err := tx.Exec(`
+				INSERT INTO proxy_api_keys (id, created_at, updated_at, deleted_at, user_id, key_hash, key_prefix, name, is_active, last_used_at, expires_at)
+				SELECT id, created_at, updated_at, deleted_at, user_id, key_hash, key_prefix, name, is_active, last_used_at, expires_at
+				FROM proxy_api_keys_old
+			`).Error; err != nil {
+				return err
+			}
+
+			// Drop old table
+			if err := tx.Migrator().DropTable("proxy_api_keys_old"); err != nil {
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
 			return err
 		}
 	}
