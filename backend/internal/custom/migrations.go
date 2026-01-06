@@ -55,6 +55,11 @@ func migrateExistingData(db *gorm.DB) error {
 				}
 			}
 		}
+
+		// 2. Drop the column after migration to prevent NOT NULL constraint failures on new inserts
+		if err := db.Migrator().DropColumn(&models.ProxyAPIKey{}, "provider_id"); err != nil {
+			return err
+		}
 	}
 
 	return nil
