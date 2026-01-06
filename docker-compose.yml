@@ -18,7 +18,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
       # Database volume - persists data across container restarts
-      - backend_data:/app/data
+      - ./backend_data:/app/data
       # Log volume - for persistent logging
       - backend_logs:/app/logs
     networks:
