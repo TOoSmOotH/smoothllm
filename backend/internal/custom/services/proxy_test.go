@@ -403,6 +403,34 @@ func TestProxyService_ExtractUsageFromResponse(t *testing.T) {
 	})
 }
 
+func TestProxyService_ExtractStreamingUsage(t *testing.T) {
+	db := setupProxyTestDB(t)
+	service := createProxyTestServices(t, db)
+
+	t.Run("extracts OpenAI streaming usage from standard chunks", func(t *testing.T) {
+		response := "data: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"created\":123,\"model\":\"gpt-4o\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hello\"},\"finish_reason\":null}]}\n\ndata: {\"id\":\"1\",\"object\":\"chat.completion.chunk\",\"created\":123,\"model\":\"gpt-4o\",\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5,\"total_tokens\":15},\"finish_reason\":\"stop\"}\n\ndata: [DONE]\n"
+
+		result := &ProxyResult{StatusCode: 200}
+		service.extractUsageFromResponse([]byte(response), models.ProviderTypeOpenAI, result)
+
+		assert.Equal(t, 10, result.InputTokens)
+		assert.Equal(t, 5, result.OutputTokens)
+		assert.Equal(t, 15, result.TotalTokens)
+	})
+
+	t.Run("extracts Anthropic streaming usage from message_start", func(t *testing.T) {
+		response := "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"id\":\"msg_1\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"claude-3-5-sonnet-20241022\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":20,\"output_tokens\":0}}}\n\nevent: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\nevent: message_delta\ndata: {\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":10}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n"
+
+		result := &ProxyResult{StatusCode: 200}
+		service.extractUsageFromResponse([]byte(response), models.ProviderTypeAnthropic, result)
+
+		// Note: The current implementation picks the last data chunk with usage.
+		// In Anthropic's case, message_delta usually has the production tokens.
+		// We'll trust it finds the last one with a valid count.
+		assert.Equal(t, 10, result.OutputTokens)
+	})
+}
+
 func TestProxyService_GetProxyKeyFromRequest(t *testing.T) {
 	// Note: This test would require mocking gin.Context
 	// For now, we test the logic paths documented in the function

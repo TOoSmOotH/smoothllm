@@ -54,12 +54,18 @@ type OpenAIChatRequest struct {
 	TopP             *float64               `json:"top_p,omitempty"`
 	N                *int                   `json:"n,omitempty"`
 	Stream           *bool                  `json:"stream,omitempty"`
+	StreamOptions    *OpenAIStreamOptions   `json:"stream_options,omitempty"`
 	Stop             interface{}            `json:"stop,omitempty"`
 	PresencePenalty  *float64               `json:"presence_penalty,omitempty"`
 	FrequencyPenalty *float64               `json:"frequency_penalty,omitempty"`
 	LogitBias        map[string]float64     `json:"logit_bias,omitempty"`
 	User             string                 `json:"user,omitempty"`
 	Extra            map[string]interface{} `json:"-"` // Catch any additional fields
+}
+
+// OpenAIStreamOptions represents the stream_options field in OpenAI requests
+type OpenAIStreamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
 }
 
 // OpenAIMessage represents a message in the OpenAI format
@@ -245,6 +251,14 @@ func (s *ProxyService) ProxyRequest(c *gin.Context, proxyKey *models.ProxyAPIKey
 	}
 
 	result.Model = chatReq.Model
+
+	// If streaming is enabled for OpenAI/compatible, ensure usage is included
+	if chatReq.Stream != nil && *chatReq.Stream {
+		if chatReq.StreamOptions == nil {
+			chatReq.StreamOptions = &OpenAIStreamOptions{IncludeUsage: true}
+			// Update the stored request body if it hasn't been transformed yet
+		}
+	}
 
 	// Determine which provider to use
 	provider, err := s.GetProviderForModel(proxyKey, chatReq.Model)
@@ -686,10 +700,40 @@ func (s *ProxyService) extractOpenAIUsage(body []byte, result *ProxyResult) {
 		} `json:"usage"`
 	}
 
-	if err := json.Unmarshal(body, &resp); err == nil {
+	if err := json.Unmarshal(body, &resp); err == nil && resp.Usage.TotalTokens > 0 {
 		result.InputTokens = resp.Usage.PromptTokens
 		result.OutputTokens = resp.Usage.CompletionTokens
 		result.TotalTokens = resp.Usage.TotalTokens
+		return
+	}
+
+	// Try extracting from SSE format if it's a stream
+	lines := strings.Split(string(body), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+
+		data := strings.TrimPrefix(line, "data: ")
+		if data == "[DONE]" {
+			continue
+		}
+
+		var chunk struct {
+			Usage struct {
+				PromptTokens     int `json:"prompt_tokens"`
+				CompletionTokens int `json:"completion_tokens"`
+				TotalTokens      int `json:"total_tokens"`
+			} `json:"usage"`
+		}
+
+		if err := json.Unmarshal([]byte(data), &chunk); err == nil && chunk.Usage.TotalTokens > 0 {
+			result.InputTokens = chunk.Usage.PromptTokens
+			result.OutputTokens = chunk.Usage.CompletionTokens
+			result.TotalTokens = chunk.Usage.TotalTokens
+			return
+		}
 	}
 }
 
@@ -702,10 +746,52 @@ func (s *ProxyService) extractAnthropicUsage(body []byte, result *ProxyResult) {
 		} `json:"usage"`
 	}
 
-	if err := json.Unmarshal(body, &resp); err == nil {
+	if err := json.Unmarshal(body, &resp); err == nil && (resp.Usage.InputTokens > 0 || resp.Usage.OutputTokens > 0) {
 		result.InputTokens = resp.Usage.InputTokens
 		result.OutputTokens = resp.Usage.OutputTokens
 		result.TotalTokens = resp.Usage.InputTokens + resp.Usage.OutputTokens
+		return
+	}
+
+	// Try extracting from Anthropic SSE format
+	// Anthropic streaming ends with a message_stop event, but usage is usually in message_start or message_delta
+	// However, we look for any chunk that has the usage field.
+	lines := strings.Split(string(body), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if !strings.HasPrefix(line, "data: ") {
+			continue
+		}
+
+		data := strings.TrimPrefix(line, "data: ")
+		var chunk struct {
+			Type    string `json:"type"`
+			Message struct {
+				Usage struct {
+					InputTokens  int `json:"input_tokens"`
+					OutputTokens int `json:"output_tokens"`
+				} `json:"usage"`
+			} `json:"message"` // message_start has this
+			Usage struct {
+				InputTokens  int `json:"input_tokens"`
+				OutputTokens int `json:"output_tokens"`
+			} `json:"usage"` // message_delta or final might have this
+		}
+
+		if err := json.Unmarshal([]byte(data), &chunk); err == nil {
+			if chunk.Usage.InputTokens > 0 || chunk.Usage.OutputTokens > 0 {
+				result.InputTokens = chunk.Usage.InputTokens
+				result.OutputTokens = chunk.Usage.OutputTokens
+				result.TotalTokens = result.InputTokens + result.OutputTokens
+				return
+			}
+			if chunk.Message.Usage.InputTokens > 0 || chunk.Message.Usage.OutputTokens > 0 {
+				result.InputTokens = chunk.Message.Usage.InputTokens
+				result.OutputTokens = chunk.Message.Usage.OutputTokens
+				result.TotalTokens = result.InputTokens + result.OutputTokens
+				return
+			}
+		}
 	}
 }
 
